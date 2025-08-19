@@ -5,6 +5,8 @@ import { userController } from "./user.controller";
 
 const router=Router();
 
-router.post('/register',validateRequest(createUserZodSchema),userController.register)
+router.post('/register',
+    validateRequest(createUserZodSchema),
+    userController.register)
 
 export const userRoutes = router;
