@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
@@ -9,6 +10,7 @@ import { envVars } from "../../config/env";
 import { sendResponse } from "../../utils/sendResponse";
 import { authService } from "./auth.service";
 import { JwtPayload } from "jsonwebtoken";
+import passport from "passport";
 
 const googleCallback = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     let redirectUrl = req.query.state ? req.query.state as string : '';
@@ -24,6 +26,34 @@ const googleCallback = catchAsync(async (req: Request, res: Response, next: Next
     setCookie(res, tokenInfo);
     res.redirect(`${envVars.FRONTEND_URL}/${redirectUrl}`);
 });
+
+const credentialsLogin=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate("local",(err:any,user:any,info:any)=>{
+        if(err){
+            return next(new AppError(httpStatus.INTERNAL_SERVER_ERROR,err));
+        }
+        if(!user){
+            return next(new AppError(httpStatus.UNAUTHORIZED, info.message));
+        }
+
+        const tokenInfo=createUserToken(user)
+
+        setCookie(res,tokenInfo);
+
+        const {password:pass,...rest}=user.toObject();
+
+        sendResponse(res,{
+            success: true,
+            statusCode: httpStatus.OK,
+            message: "Login successful",
+            data:{
+                user: rest,
+                accessToken: tokenInfo.accessToken,
+                refreshToken: tokenInfo.refreshToken
+            }
+        })
+    })(req, res, next);
+})
 
 const logout = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     res.clearCookie("accessToken", {
@@ -75,6 +105,7 @@ const getNewAccessToken = catchAsync(async (req: Request, res: Response, next: N
 })
 export const authController = {
     googleCallback,
+    credentialsLogin,
     logout,
     resetPassword,
     getNewAccessToken

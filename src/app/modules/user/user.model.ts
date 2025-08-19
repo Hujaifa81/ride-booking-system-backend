@@ -16,7 +16,7 @@ const userSchema = new Schema<IUser>({
     phone: { type: String },
     picture: { type: String },
     address: { type: String },
-    isDeleted: { type: String, default: "false" },
+    isDeleted: { type: Boolean, default: false },
     isActive: { type: String, enum: Object.values(IsActive), default: IsActive.ACTIVE },
     isVerified: { type: Boolean, default: false },
     role: { type: String, enum: Object.values(Role), default: Role.RIDER },

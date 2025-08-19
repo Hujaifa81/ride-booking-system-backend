@@ -14,6 +14,8 @@ router.get("/google/callback",passport.authenticate("google", {
     failureRedirect: "/login",
 }),authController.googleCallback)
 
+router.post('/login',authController.credentialsLogin)
+
 router.post('/logout',authController.logout)
 
 router.post('/reset-password',checkAuth(...Object.values(Role)), authController.resetPassword);
