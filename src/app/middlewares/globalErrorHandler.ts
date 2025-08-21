@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextFunction, Request, Response } from "express";
+import  { NextFunction, Request, Response } from "express";
 import { envVars } from "../config/env";
 import { handleCastError } from "../helpers/handleCastError";
 import AppError from "../errorHelpers/AppError";
 import { handleDuplicateError } from "../helpers/handleDuplicateError";
 import { handleValidationError } from "../helpers/handleValidationError";
 import { TErrorSources } from "../interfaces/error.types";
+import { handleZodError } from "../helpers/handleZodError";
 
 
 export const globalErrorHandler = async (err: any, req: Request, res: Response, next: NextFunction) => {
@@ -32,6 +33,13 @@ export const globalErrorHandler = async (err: any, req: Request, res: Response, 
     //mongoose validation error
     else if(err.name === 'ValidationError') {
         const simplifiedError=handleValidationError(err);
+        statusCode = simplifiedError.statusCode;
+        message = simplifiedError.message;
+        errorSources = simplifiedError.errorSources as TErrorSources[];
+    }
+
+    else if (err.name === 'ZodError') {
+        const simplifiedError = handleZodError(err);
         statusCode = simplifiedError.statusCode;
         message = simplifiedError.message;
         errorSources = simplifiedError.errorSources as TErrorSources[];
