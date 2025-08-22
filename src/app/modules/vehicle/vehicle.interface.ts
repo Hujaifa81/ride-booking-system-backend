@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 
 export interface IVehicle {
   _id?: Types.ObjectId;            
-  driverId: Types.ObjectId;         
+  user: Types.ObjectId;         
   make?: string;                     
   model: string;                    
   licensePlate: string;             

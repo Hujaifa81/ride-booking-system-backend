@@ -10,10 +10,10 @@ export const locationSchema = new Schema<ILocation>({
 });
 
 const driverSchema=new Schema<IDriver>({
-    userId: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
+    user: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
     licenseNumber: { type: String, required: true },
     rating: { type: Number, default: 0 },
-    vehicles: [{ type: Schema.Types.ObjectId, ref: 'Vehicle', default: [] }],
+    // vehicles: [{ type: Schema.Types.ObjectId, ref: 'Vehicle', default: [] }],
     status: { type: String, enum: Object.values(DriverStatus), default: DriverStatus.OFFLINE },
     approved: { type: Boolean, default: false },
     location: { type: locationSchema, default: null },

@@ -5,7 +5,8 @@ import { verifyToken } from "../utils/jwt";
 import { envVars } from "../config/env";
 import { JwtPayload } from "jsonwebtoken";
 import { User } from "../modules/user/user.model";
-import { IsActive } from "../modules/user/user.interface";
+import { IsActive, Role } from "../modules/user/user.interface";
+import { Driver } from "../modules/driver/driver.model";
 
 export const checkAuth=(...authRoles:string[])=>async (req: Request, res: Response, next: NextFunction) => {
     try{
@@ -30,8 +31,17 @@ export const checkAuth=(...authRoles:string[])=>async (req: Request, res: Respon
         if(userExist.isDeleted){
             throw new AppError(httpStatus.UNAUTHORIZED, "User is deleted");
         }
+
+        
         if(!authRoles.includes(verifiedToken.role)){
             throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to access this resource");
+        }
+        
+        if(verifiedToken.role===Role.DRIVER){
+            const driver=await Driver.findOne({user:userExist._id});
+            if(!driver?.approved){
+                throw new AppError(httpStatus.UNAUTHORIZED, "You are not approved as a driver yet. Please wait for admin approval.");
+            }
         }
         req.user=verifiedToken;
         next();
