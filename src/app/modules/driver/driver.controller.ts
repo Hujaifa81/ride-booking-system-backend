@@ -5,7 +5,6 @@ import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from 'http-status-codes';
 import { DriverService } from "./driver.service";
 import { JwtPayload } from "jsonwebtoken";
-import { User } from "../user/user.model";
 import { createUserToken } from "../../utils/userToken";
 import { setCookie } from "../../utils/setCookie";
 
@@ -50,9 +49,9 @@ const driverApprovedStatusChange = catchAsync(async (req: Request, res: Response
 
 const driverStatusChange = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const driverId = req.params.driverId;
-    const { updateStatus } = req.body;
+    const { status } = req.body;
 
-    const driver=await DriverService.driverStatusChange(driverId,updateStatus,req.user as JwtPayload);
+    const driver=await DriverService.driverStatusChange(driverId,status,req.user as JwtPayload);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -62,9 +61,24 @@ const driverStatusChange = catchAsync(async (req: Request, res: Response, next: 
     })
 })
 
+const driverLocationUpdate = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const driverId = req.params.driverId;
+    const location = req.body;
+
+    const driver = await DriverService.driverLocationUpdate(driverId, location,req.user as JwtPayload);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Driver location updated successfully.`,
+        success: true,
+        data: driver
+    })
+})
+
 export const driverController = {
     createDriver,
     getAllDrivers,
     driverApprovedStatusChange,
-    driverStatusChange
+    driverStatusChange,
+    driverLocationUpdate
 }

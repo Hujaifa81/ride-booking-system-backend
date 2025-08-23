@@ -19,13 +19,14 @@ export interface IStatusLog {
 
 export interface IRide {
     _id?: Types.ObjectId;
-    riderId: Types.ObjectId;
-    driverId?: Types.ObjectId;
-    vehicleId?: Types.ObjectId;
+    user: Types.ObjectId;
+    driver?: Types.ObjectId;
+    vehicle?: Types.ObjectId;
     pickupLocation: ILocation;
     dropOffLocation: ILocation;
     status: RideStatus;
-    fare?: number;
+    approxFare?: number;
+    finalFare?: number;
     distance?: number; // in kilometers
     duration?: number; // in seconds
     statusHistory: IStatusLog[];

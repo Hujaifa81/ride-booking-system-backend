@@ -17,7 +17,7 @@ export interface IDriver {
     // vehicles?: Types.ObjectId[];
     status:DriverStatus;
     approved?: boolean;
-    location?: ILocation;
+    location?: ILocation | null;
     activeRide?: Types.ObjectId | null;
     earnings?: number;
 }

@@ -13,12 +13,13 @@ const statusLogSchema = new Schema<IStatusLog>({
 const rideSchema = new Schema<IRide>({
     pickupLocation: { type: Object, required: true },
     dropOffLocation: { type: Object, required: true },
-    fare: { type: Number },
+    approxFare: { type: Number },
+    finalFare: { type: Number },
     distance: { type: Number },
     duration: { type: Number },
-    riderId: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
-    driverId: { type: Schema.Types.ObjectId, ref: 'Driver' },
-    vehicleId: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
+    user: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
+    driver: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },
+    vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle', default: null },
     status: { type: String, enum: Object.values(RideStatus), default: RideStatus.REQUESTED },
     statusHistory: [{ type: statusLogSchema, default: []}],
     canceledReason: { type: String }

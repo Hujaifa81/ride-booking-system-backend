@@ -1,6 +1,6 @@
 import { JwtPayload } from "jsonwebtoken";
 import AppError from "../../errorHelpers/AppError";
-import { DriverStatus, IDriver } from "./driver.interface";
+import { DriverStatus, IDriver, ILocation } from "./driver.interface";
 import { Driver } from "./driver.model";
 import httpStatus from "http-status-codes";
 import { Vehicle } from "../vehicle/vehicle.model";
@@ -93,8 +93,8 @@ const driverStatusChange = async (driverId: string, updateStatus: string, token:
     if (!activeVehicle) {
       throw new AppError(httpStatus.BAD_REQUEST, "Do not have any active vehicle. Please activate a vehicle first.");
     }
-    if(!driver.location){
-      throw new AppError(httpStatus.BAD_REQUEST, "Set location first to go available.");
+    if (!driver.location) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Update location first to go available.");
     }
   }
 
@@ -103,11 +103,22 @@ const driverStatusChange = async (driverId: string, updateStatus: string, token:
       throw new AppError(httpStatus.BAD_REQUEST, "You cannot change status while on trip");
     }
 
+    if (updateStatus === DriverStatus.ON_TRIP) {
+      throw new AppError(httpStatus.BAD_REQUEST, "You cannot change status to ON_TRIP. This is done by the system when a ride is accepted.");
+    }
+
     if ((updateStatus !== DriverStatus.AVAILABLE) && (updateStatus !== DriverStatus.OFFLINE)) {
       throw new AppError(httpStatus.BAD_REQUEST, "Invalid status change request");
     }
+
+
     driver.status = updateStatus as DriverStatus;
     await driver.save();
+
+    if (driver.status === DriverStatus.OFFLINE) {
+      driver.location = null;
+      await driver.save();
+    }
   }
 
   if (token.role === Role.ADMIN) {
@@ -123,11 +134,34 @@ const driverStatusChange = async (driverId: string, updateStatus: string, token:
   return driver;
 }
 
+const driverLocationUpdate = async (driverId: string, location: ILocation, token: JwtPayload) => {
+
+  const driver = await Driver.findById(driverId);
+
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
+  }
+
+  if (driver.user.toString() !== token.userId) {
+    throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to update this driver's location");
+  }
+
+  if (driver.status === DriverStatus.ON_TRIP) {
+    throw new AppError(httpStatus.BAD_REQUEST, "You cannot change location while on trip");
+  }
+
+  driver.location = location;
+  await driver.save();
+
+  return driver;
+}
+
 
 
 export const DriverService = {
   createDriver,
   getAllDrivers,
   driverApprovedStatusChange,
-  driverStatusChange
+  driverStatusChange,
+  driverLocationUpdate
 };

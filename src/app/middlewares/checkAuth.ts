@@ -32,7 +32,7 @@ export const checkAuth=(...authRoles:string[])=>async (req: Request, res: Respon
             throw new AppError(httpStatus.UNAUTHORIZED, "User is deleted");
         }
 
-        
+       
         if(!authRoles.includes(verifiedToken.role)){
             throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to access this resource");
         }

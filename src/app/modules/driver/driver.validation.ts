@@ -29,6 +29,6 @@ export const updateDriverZodSchema = z.object({
 export const updateLocationZodSchema = z.object({
     lat: z.number({ error: "Latitude must be a number" }).min(-90, { message: "Latitude must be at least -90" }).max(90, { message: "Latitude cannot exceed 90." }),
     lng: z.number({ error: "Longitude must be a number" }).min(-180, { message: "Longitude must be at least -180" }).max(180, { message: "Longitude cannot exceed 180." })
-}).optional();
+});
 
 
