@@ -4,14 +4,15 @@ export const approxFareCalculation = (pickupLocation: ILocation, dropOffLocation
     const dx = dropOffLocation.lat - pickupLocation.lat;
     const dy = dropOffLocation.lng - dropOffLocation.lng;
     const km = Math.sqrt(dx * dx + dy * dy) * 111;
-    const base = 50; 
     const perKm = 25;
-    const approxTotalFare = base + (perKm * km);
+    const timeInMinutes = (km / 40) * 60; // Assuming average speed of 40 km/h
+    const perMinute = 5;
+    const approxTotalFare =  (perKm * km) + (perMinute * timeInMinutes);
     return Math.round(approxTotalFare);
 }
 
-export const PenaltyFareForExceedingTime = (startTime: number,completedTime:number,pickupLocation: ILocation, dropOffLocation: ILocation): number => {
-    const durationInMinutes = (completedTime - startTime) / (1000 * 60);
+export const PenaltyFareForExceedingTime = (startTime: Date,completedTime:Date,pickupLocation: ILocation, dropOffLocation: ILocation): number => {
+    const durationInMinutes = (completedTime.getTime() - startTime.getTime()) / (1000 * 60);
     const dx = dropOffLocation.lat - pickupLocation.lat;
     const dy = dropOffLocation.lng - dropOffLocation.lng;
     const km = Math.sqrt(dx * dx + dy * dy) * 111;
@@ -27,3 +28,9 @@ export const PenaltyFareForExceedingTime = (startTime: number,completedTime:numb
 export const finalFareCalculation = (approxFare: number,penaltyFare:number):number => {
     return approxFare + penaltyFare;
 }
+
+export const driverEarningCalculation = (finalFare: number): number => {
+    const driverSharePercentage = 0.75; // Assuming driver gets 75% of the final fare
+    return finalFare * driverSharePercentage;
+}
+

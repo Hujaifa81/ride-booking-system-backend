@@ -19,5 +19,5 @@ export interface IDriver {
     approved?: boolean;
     location?: ILocation | null;
     activeRide?: Types.ObjectId | null;
-    earnings?: number;
+    earnings?: number | 0;
 }

@@ -31,3 +31,11 @@ export const updateRideZodSchema = z.object({
         by: z.string().regex(/^[0-9a-fA-F]{24}$/, { message: "Invalid ObjectId format." })
     })).optional()
 });
+
+export const rideStatusChangeZodSchema = z.object({
+    status: z.enum(Object.values(RideStatus), { message: "Status must be one of the predefined ride statuses." })
+});
+
+export const cancelRideZodSchema = z.object({
+    canceledReason: z.string({ error: "Canceled reason must be a string" }).max(200, { message: "Canceled reason cannot exceed 200 characters." })
+});

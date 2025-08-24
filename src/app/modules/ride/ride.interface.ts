@@ -4,8 +4,10 @@ import { ILocation } from "../driver/driver.interface";
 export enum RideStatus {
     'REQUESTED' = 'REQUESTED',
     'ACCEPTED' = 'ACCEPTED',
-    'PICKED_UP' = 'PICKED_UP',
+    'GOING_TO_PICK_UP' = 'GOING_TO_PICK_UP',
+    'DRIVER_ARRIVED' = 'DRIVER_ARRIVED',
     'IN_TRANSIT' = 'IN_TRANSIT',
+    'REACHED_DESTINATION' = 'REACHED_DESTINATION',
     'COMPLETED' = 'COMPLETED',
     'CANCELED_BY_RIDER' = 'CANCELED_BY_RIDER',
     'CANCELED_BY_DRIVER' = 'CANCELED_BY_DRIVER',
@@ -20,8 +22,8 @@ export interface IStatusLog {
 export interface IRide {
     _id?: Types.ObjectId;
     user: Types.ObjectId;
-    driver?: Types.ObjectId;
-    vehicle?: Types.ObjectId;
+    driver?: Types.ObjectId | null;
+    vehicle?: Types.ObjectId | null;
     pickupLocation: ILocation;
     dropOffLocation: ILocation;
     status: RideStatus;

@@ -2,6 +2,7 @@ import { Server } from 'http';
 import { envVars } from './app/config/env';
 import mongoose from 'mongoose';
 import app from './app';
+import { seedAdmin } from './app/utils/seeAdmin';
 
 
 let server: Server
@@ -19,7 +20,11 @@ const startServer = async () => {
         console.log(error);
     }
 }
-startServer();
+(async () => {
+    await startServer();
+    await seedAdmin();
+})()
+
 process.on("SIGTERM", () => {
     console.log("SIGTERM signal received... Server shutting down..");
 
