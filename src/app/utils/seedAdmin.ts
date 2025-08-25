@@ -1,5 +1,6 @@
 import { Role } from "../modules/user/user.interface";
 import { User } from "../modules/user/user.model";
+import { hashedPassword } from "./hashedPassword";
 
 export const seedAdmin = async () => {
     const adminExists = await User.findOne({ role: Role.ADMIN });
@@ -7,11 +8,11 @@ export const seedAdmin = async () => {
         console.log("Admin user already exists. Skipping seeding.");
         return;
     }
-
+    const afterHashedPassword=await hashedPassword("Admin@123")
     const payload = {
         name: "Admin User",
         email: "admin@gmail.com",
-        password: "admin@123",
+        password: afterHashedPassword,
         role: Role.ADMIN,
         isVerified: true,
         contactNumber: "1234567890",

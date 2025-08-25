@@ -18,7 +18,8 @@ const driverSchema=new Schema<IDriver>({
     approved: { type: Boolean, default: false },
     location: { type: locationSchema, default: null },
     activeRide: { type: Schema.Types.ObjectId, ref: 'Ride', default: null },
-    earnings: { type: Number, default: 0 }
+    earnings: { type: Number, default: 0 },
+    isSuspended: { type: Boolean, default: false }
 }, {
     timestamps: true,
     versionKey: false

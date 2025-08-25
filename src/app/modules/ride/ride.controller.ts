@@ -42,8 +42,45 @@ const cancelRide=catchAsync(async (req: Request, res: Response, next: NextFuncti
     });
 })
 
+const getAllRides=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const rides=await RideService.getAllRides();
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `All rides fetched successfully`,
+        success: true,
+        data: rides
+    });
+})
+
+const getRideHistory=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const userId=req.params.userId;
+    const rides=await RideService.getRideHistory(userId,req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Ride history fetched successfully`,
+        success: true,
+        data: rides
+    });
+}
+)
+
+const getSingleRideDetails=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const rideId=req.params.rideId;
+    const ride=await RideService.getSingleRideDetails(rideId,req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Ride details fetched successfully`,
+        success: true,
+        data: ride
+    });
+})
+
 export const RideController = {
     createRide,
     rideStatusChange,
-    cancelRide
+    cancelRide,
+    getRideHistory,
+    getSingleRideDetails,
+    getAllRides
+    
 }

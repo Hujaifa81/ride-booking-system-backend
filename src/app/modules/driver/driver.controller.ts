@@ -75,10 +75,36 @@ const driverLocationUpdate = catchAsync(async (req: Request, res: Response, next
     })
 })
 
+const getDriverEarningsHistory=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const driverId = req.params.driverId;
+
+    const earningsHistory = await DriverService.getDriverEarningsHistory(driverId,req.user as JwtPayload);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Driver earnings history fetched successfully.`,
+        success: true,
+        data: earningsHistory
+    })
+})
+
+const driverSuspendedStatusChange=catchAsync(async(req:Request, res:Response, next:NextFunction)=>{
+    const driverId=req.params.driverId;
+    const {isSuspended}=req.body;
+    const driver=await DriverService.driverSuspendedStatusChange(driverId,isSuspended);
+    sendResponse(res,{
+        statusCode:httpStatus.OK,
+        message:`Driver is now ${isSuspended ? 'suspended' : 'active'}`,
+        success:true,
+        data:driver
+    })
+})
 export const driverController = {
     createDriver,
     getAllDrivers,
     driverApprovedStatusChange,
     driverStatusChange,
-    driverLocationUpdate
+    driverLocationUpdate,
+    getDriverEarningsHistory,
+    driverSuspendedStatusChange
 }

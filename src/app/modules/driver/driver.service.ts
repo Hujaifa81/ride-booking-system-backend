@@ -6,6 +6,10 @@ import httpStatus from "http-status-codes";
 import { Vehicle } from "../vehicle/vehicle.model";
 import { User } from "../user/user.model";
 import { Role } from "../user/user.interface";
+import { Ride } from "../ride/ride.model";
+import { driverEarningCalculation } from "../../utils/fareCalculation";
+import { RideStatus } from "../ride/ride.interface";
+
 
 const createDriver = async (payload: Partial<IDriver>, token: JwtPayload) => {
 
@@ -156,6 +160,46 @@ const driverLocationUpdate = async (driverId: string, location: ILocation, token
   return driver;
 }
 
+const getDriverEarningsHistory = async (driverId: string,token:JwtPayload) => {
+  const driver = await Driver.findById(driverId);
+  const rides=await Ride.find({driver:driverId,status:RideStatus.COMPLETED});
+
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
+  }
+  if(driver.user.toString()!==token.userId && token.role!==Role.ADMIN){
+    throw new AppError(httpStatus.UNAUTHORIZED,"You are not authorized to view this earnings history");
+  }
+
+  const earningsHistoryFromRides = rides.map(ride=>{
+    const earningCalculation=driverEarningCalculation(Number(ride?.finalFare));
+    return {
+      rideId:ride._id,
+      fare:ride.finalFare,
+      earningFromThisRide:earningCalculation,
+      pickupLocation:ride.pickupLocation,
+      dropOffLocation:ride.dropOffLocation,
+      
+    }
+  })
+   
+  return earningsHistoryFromRides;
+}
+
+const driverSuspendedStatusChange=async(driverId:string, isSuspended:boolean)=>{
+  const driver=await Driver.findById(driverId);
+  if(!driver){
+    throw new AppError(httpStatus.NOT_FOUND,"Driver not found");
+  }
+  if(driver.isSuspended===isSuspended){
+    throw new AppError(httpStatus.BAD_REQUEST,`Driver is already ${isSuspended ? 'suspended' : 'active'}`);
+  }
+
+  driver.isSuspended=isSuspended;
+  await driver.save();
+  return driver;
+}
+
 
 
 export const DriverService = {
@@ -163,5 +207,7 @@ export const DriverService = {
   getAllDrivers,
   driverApprovedStatusChange,
   driverStatusChange,
-  driverLocationUpdate
+  driverLocationUpdate,
+  getDriverEarningsHistory,
+  driverSuspendedStatusChange
 };

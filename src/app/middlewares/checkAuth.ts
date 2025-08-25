@@ -42,6 +42,9 @@ export const checkAuth=(...authRoles:string[])=>async (req: Request, res: Respon
             if(!driver?.approved){
                 throw new AppError(httpStatus.UNAUTHORIZED, "You are not approved as a driver yet. Please wait for admin approval.");
             }
+            if(driver?.isSuspended){
+                throw new AppError(httpStatus.UNAUTHORIZED, "You are suspended as a driver. Please contact support.");
+            }
         }
         req.user=verifiedToken;
         next();

@@ -23,6 +23,7 @@ export const updateDriverZodSchema = z.object({
     activeRide: z.string().regex(/^[0-9a-fA-F]{24}$/, { message: "Invalid active ride ID format." }).optional(),
     earnings: z.number({ error: "Earnings must be a number" }).min(0, { message: "Earnings at least 0" }).optional(),
     rating: z.number().min(0, { message: "Rating at least 0" }).max(5, { message: "Ratings can not exceed 5" }).optional(),
+    isSuspended: z.boolean({ error: "isSuspended must be a boolean" }).optional(),
     // vehicles: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, { message: "Invalid Vehicle ID format." })).optional()
 })
 

@@ -20,4 +20,5 @@ export interface IDriver {
     location?: ILocation | null;
     activeRide?: Types.ObjectId | null;
     earnings?: number | 0;
+    isSuspended?: boolean;
 }

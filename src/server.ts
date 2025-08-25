@@ -2,7 +2,7 @@ import { Server } from 'http';
 import { envVars } from './app/config/env';
 import mongoose from 'mongoose';
 import app from './app';
-import { seedAdmin } from './app/utils/seeAdmin';
+import { seedAdmin } from './app/utils/seedAdmin';
 
 
 let server: Server

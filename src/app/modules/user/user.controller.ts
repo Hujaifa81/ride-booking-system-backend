@@ -14,6 +14,29 @@ const register=catchAsync(async(req:Request, res:Response, next:NextFunction) =>
         data:user
     }) 
 })
+const getAllUsers=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
+    const users=await UserService.getAllUsers();
+    sendResponse(res,{
+        statusCode:httpStatus.OK,
+        message:"Users fetched successfully",
+        success:true,
+        data:users
+    }) 
+})
+const isActiveChange=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
+    const userId=req.params.userId;
+    const {isActive}=req.body;
+    const user=await UserService.isActiveChange(userId,isActive);
+    sendResponse(res,{
+        statusCode:httpStatus.OK,
+        message:`User is now ${isActive}`,
+        success:true,
+        data:user
+    })
+})
 export const userController = {
-    register
+    register,
+    getAllUsers,
+    isActiveChange
+
 }
