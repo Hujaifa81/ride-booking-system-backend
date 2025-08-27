@@ -5,10 +5,11 @@ export enum DriverStatus {
     ON_TRIP = "ON_TRIP",
     OFFLINE = "OFFLINE"
 }
-export interface ILocation{
-    lat: number;
-    lng: number;
+export interface ILocation {
+  type: "Point";
+  coordinates: [number, number]; // [longitude, latitude]
 }
+
 export interface IDriver {
     _id?: Types.ObjectId;
     user: Types.ObjectId;

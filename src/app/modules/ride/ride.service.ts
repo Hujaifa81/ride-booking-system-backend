@@ -4,19 +4,23 @@ import { Ride } from "./ride.model";
 import { approxFareCalculation } from "../../utils/fareCalculation";
 import httpStatus from "http-status-codes";
 import AppError from "../../errorHelpers/AppError";
-import { acceptRide, cancelRide, completedRide, driverArrived, goingToPickup, inTransitRide, reachedDestinationRide } from "../../utils/rideStatusChange";
+import { cancelRide, completedRide, driverArrived, goingToPickup, inTransitRide, reachedDestinationRide } from "../../utils/rideStatusChange";
 import { Vehicle } from "../vehicle/vehicle.model";
+import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";
+import { Driver } from "../driver/driver.model";
+import { DriverStatus } from "../driver/driver.interface";
+import { agenda } from "../../agenda/agenda";
 
 
 const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
-    const rides = await Ride.find({ user: token.userId, status: { $in: [RideStatus.ACCEPTED, RideStatus.IN_TRANSIT, RideStatus.GOING_TO_PICK_UP, RideStatus.DRIVER_ARRIVED, RideStatus.REQUESTED] } });
+    const rides = await Ride.find({ user: token.userId, status: { $in: [RideStatus.ACCEPTED, RideStatus.IN_TRANSIT, RideStatus.GOING_TO_PICK_UP, RideStatus.DRIVER_ARRIVED, RideStatus.REQUESTED, RideStatus.PENDING] } });
 
     if (rides.length > 0) {
         throw new AppError(httpStatus.BAD_REQUEST, "You have an ongoing ride. Please complete or cancel the current ride before requesting a new one.");
     }
 
     if (rideData.pickupLocation && rideData.dropOffLocation) {
-        if (rideData.pickupLocation.lat === rideData.dropOffLocation.lat && rideData.pickupLocation.lng === rideData.dropOffLocation.lng) {
+        if (rideData.pickupLocation.coordinates[0] === rideData.dropOffLocation.coordinates[0] && rideData.pickupLocation.coordinates[1] === rideData.dropOffLocation.coordinates[1]) {
             throw new AppError(httpStatus.BAD_REQUEST, "Pickup and drop-off locations cannot be the same.");
         }
     }
@@ -27,50 +31,55 @@ const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
     }
     rideData.approxFare = approxFare;
 
+
     const ride = await Ride.create({
         ...rideData,
         user: token.userId,
+        rejectedDrivers: [],
+        statusHistory: [{
+            status: RideStatus.REQUESTED,
+            timestamp: new Date(),
+            by: token.userId
+        }]
     });
 
-    ride.statusHistory.push({
-        status: RideStatus.REQUESTED,
-        by: token.userId,
-        timestamp: new Date()
-    })
-    ride.save()
+    const driver = await findNearestAvailableDriver(ride._id.toString())
 
+    if (!driver) {
+        ride.status = RideStatus.PENDING;
+        await ride.save();
+        // Start repeating job to retry assignment every 30 sec
+        await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id });
+        return ride;
+    }
+    ride.driver = driver?._id;
+    await ride.save();
+    // Schedule job to check driver response after 1 minute
+    await agenda.schedule("1 minute", "driverResponseTimeout", { rideId: ride._id, driverId: driver._id });
+    
     return ride;
 }
 
-const rideStatusChange = async (rideId: string, status: RideStatus, token: JwtPayload) => {
-
-    if (status === RideStatus.ACCEPTED) {
-        const ride = await acceptRide(rideId, token);
-        return ride;
-    }
+const rideStatusChangeAfterRideAccepted = async (rideId: string, status: RideStatus, token: JwtPayload) => {
 
     if (status === RideStatus.GOING_TO_PICK_UP) {
-
         const ride = await goingToPickup(rideId, token);
         return ride;
 
     }
 
     if (status === RideStatus.DRIVER_ARRIVED) {
-
         const ride = await driverArrived(rideId, token);
         return ride;
 
     }
 
     if (status === RideStatus.IN_TRANSIT) {
-
         const ride = await inTransitRide(rideId, token);
         return ride;
     }
 
     if (status === RideStatus.REACHED_DESTINATION) {
-
         const ride = await reachedDestinationRide(rideId, token);
         return ride;
 
@@ -144,11 +153,96 @@ const getSingleRideDetails = async (rideId: string, token: JwtPayload) => {
 
 }
 
+const rejectRide = async (rideId: string, token: JwtPayload) => {
+    const ride = await Ride.findOne({ _id: rideId });
+
+    if (!ride) {
+        throw new AppError(httpStatus.NOT_FOUND, "Ride not found");
+    }
+
+    if (ride.driver?.toString() !== token.userId) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to reject this ride");
+    }
+
+    if (ride.status !== RideStatus.REQUESTED) {
+        throw new AppError(httpStatus.BAD_REQUEST, "You can only reject a ride that is in requested status");
+    }
+
+    ride.rejectedDrivers.push(token.userId);
+    ride.driver = null;
+    await ride.save();
+    // Cancel any existing timeout job for this ride and driver
+    await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id, "data.driverId": token.userId });
+
+    const newDriver = await findNearestAvailableDriver(ride._id.toString());
+
+    if (newDriver) {
+        ride.driver = newDriver._id;
+        await ride.save();
+        // Schedule new timeout job for the newly assigned driver
+        await agenda.schedule("1 minute", "driverResponseTimeout", { rideId: ride._id, driverId: newDriver._id });
+
+    } else {
+        ride.status = RideStatus.PENDING;
+        ride.statusHistory.push({
+            status: RideStatus.PENDING,
+            timestamp: new Date(),
+            by: 'SYSTEM'
+        });
+        await ride.save();
+        // Start repeating job to retry assignment every 30 sec
+        await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id });
+
+    }
+
+    return ride;
+}
+
+const acceptRide = async (rideId: string, token: JwtPayload) => {
+    const ride = await Ride.findById(rideId);
+
+    if (!ride) {
+        throw new AppError(httpStatus.NOT_FOUND, "Ride not found");
+    }
+
+    if (ride.driver?.toString() !== token.userId) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to accept this ride");
+    }
+
+    if (ride.status !== RideStatus.REQUESTED) {
+        throw new AppError(httpStatus.BAD_REQUEST, "You can only accept a ride that is in requested status");
+    }
+    
+    const activeVehicle = await Vehicle.findOne({ user: token.userId, isActive: true });
+    const driver = await Driver.findOne({ user: token.userId });
+
+    ride.status = RideStatus.ACCEPTED;
+    ride.statusHistory.push({
+        status: RideStatus.ACCEPTED,
+        timestamp: new Date(),
+        by: token.userId
+    });
+    ride.vehicle = activeVehicle?._id;
+    await ride.save();
+    if (driver) {
+        driver.activeRide = ride._id;
+        driver.status = DriverStatus.ON_TRIP;
+        await driver.save();
+    }
+        // Cancel any existing timeout job for this ride and driver
+        await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id, "data.driverId": token.userId });
+        await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id });
+    return ride;
+}
+
+
 export const RideService = {
     createRide,
-    rideStatusChange,
+    rideStatusChangeAfterRideAccepted,
     canceledRide,
     getRideHistory,
     getSingleRideDetails,
-    getAllRides
+    getAllRides,
+    rejectRide,
+    acceptRide
 };

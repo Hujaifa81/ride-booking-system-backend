@@ -44,6 +44,7 @@ const isActiveChange=async(userId:string,status:IsActive)=>{
     if(user.isActive===status){
         throw new AppError(httpStatus.BAD_REQUEST, `User is already ${status}`);
     }
+    
 
     user.isActive=status;
     await user.save();

@@ -5,22 +5,33 @@ import { sendResponse } from "../../utils/sendResponse";
 import { NextFunction, Request, Response } from "express";
 import httpStatus from 'http-status-codes';
 import { RideService } from "./ride.service";
+import { RideStatus } from "./ride.interface";
 
 const createRide=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const ride = await RideService.createRide(req.body, req.user as JwtPayload);
+
+    if(ride.status=== 'PENDING'){
+        sendResponse(res, {
+            statusCode: httpStatus.OK,
+            message: "No drivers are available at the moment. Your ride request is pending. We will notify you once a driver becomes available.",
+            success: true,
+            data: ride
+        });
+        return;
+    }
     
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
-        message: "Ride created successfully",
+        message: "Ride created successfully.Waiting for driver to accept the ride.",
         success: true,
         data: ride
     });
 })
 
-const rideStatusChange=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+const rideStatusChangeAfterRideAccepted=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const rideId=req.params.rideId;
     const { status }=req.body;
-    const ride=await RideService.rideStatusChange(rideId,status,req.user as JwtPayload);
+    const ride=await RideService.rideStatusChangeAfterRideAccepted(rideId,status,req.user as JwtPayload);
     sendResponse(res, {
         statusCode: httpStatus.OK,
         message: `Ride status updated to ${status} successfully`,
@@ -75,12 +86,46 @@ const getSingleRideDetails=catchAsync(async (req: Request, res: Response, next: 
     });
 })
 
+const rejectRide=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const rideId=req.params.rideId;
+    const ride=await RideService.rejectRide(rideId,req.user as JwtPayload);
+    if(!ride.driver){
+        sendResponse(res, {
+            statusCode: httpStatus.OK,
+            message: `Ride rejected successfully. No other drivers available. Ride is now pending.`,
+            success: true,
+            data: ride
+        });
+        return;
+
+    }
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Ride rejected successfully. New driver assigned.`,
+        success: true,
+        data: ride
+    });
+})
+
+const acceptRide=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const rideId=req.params.rideId;
+    const ride=await RideService.acceptRide(rideId,req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Ride accepted successfully.`,
+        success: true,
+        data: ride
+    });
+})
+
 export const RideController = {
     createRide,
-    rideStatusChange,
+    rideStatusChangeAfterRideAccepted,
     cancelRide,
     getRideHistory,
     getSingleRideDetails,
-    getAllRides
+    getAllRides,
+    rejectRide,
+    acceptRide
     
 }

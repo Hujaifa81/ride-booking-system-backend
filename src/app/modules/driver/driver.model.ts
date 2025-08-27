@@ -2,11 +2,25 @@ import { model, Schema } from "mongoose";
 import { DriverStatus, IDriver, ILocation } from "./driver.interface";
 
 export const locationSchema = new Schema<ILocation>({
-    lat: { type: Number, required: true },
-    lng: { type: Number, required: true }
+  type: {
+    type: String,
+    enum: ["Point"], // GeoJSON Point type
+    required: true,
+    default: "Point"
+  },
+  coordinates: {
+    type: [Number], // [lng, lat]
+    required: true,
+    validate: {
+      validator: function (value: number[]) {
+        return value.length === 2;
+      },
+      message: "Coordinates must be [longitude, latitude]"
+    }
+  }
 }, {
-    _id: false,
-    versionKey: false
+  _id: false,
+  versionKey: false
 });
 
 const driverSchema=new Schema<IDriver>({
@@ -25,4 +39,5 @@ const driverSchema=new Schema<IDriver>({
     versionKey: false
 })
 
+driverSchema.index({ location: "2dsphere" });
 export const Driver = model<IDriver>('Driver', driverSchema);

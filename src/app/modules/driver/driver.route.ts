@@ -16,4 +16,5 @@ router.get("/earnings-history/:driverId",checkAuth(Role.DRIVER,Role.ADMIN), driv
 router.patch("/is-suspended/:driverId",checkAuth(Role.ADMIN), driverController.driverSuspendedStatusChange);
 
 
+
 export const driverRoutes = router;
