@@ -4,7 +4,7 @@ import { IRide, IStatusLog, RideStatus } from "./ride.interface";
 const statusLogSchema = new Schema<IStatusLog>({
     status: { type: String, enum: Object.values(RideStatus), required: true },
     timestamp: { type: Date, default: Date.now },
-    by: { type: Schema.Types.ObjectId, required: true }
+    by: { type: Schema.Types.Mixed, required: true }
 },{
     _id: false,
     versionKey: false

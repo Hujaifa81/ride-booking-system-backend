@@ -78,7 +78,7 @@ const driverStatusChange = async (driverId: string, updateStatus: string, token:
 
   const driver = await Driver.findById(driverId);
   const vehicles = await Vehicle.find({ user: token.userId });
-
+console.log(driver?.user?.toString(), token.userId);
   if (token.role === Role.DRIVER) {
     if (driver?.user?.toString() !== token.userId) {
       throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to change this driver's status");
@@ -111,6 +111,7 @@ const driverStatusChange = async (driverId: string, updateStatus: string, token:
       throw new AppError(httpStatus.BAD_REQUEST, "You cannot change status to ON_TRIP. This is done by the system when a ride is accepted.");
     }
 
+    console.log('updateStatus:', updateStatus, 'DriverStatus:', DriverStatus);
     if ((updateStatus !== DriverStatus.AVAILABLE) && (updateStatus !== DriverStatus.OFFLINE)) {
       throw new AppError(httpStatus.BAD_REQUEST, "Invalid status change request");
     }

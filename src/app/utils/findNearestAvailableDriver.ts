@@ -7,7 +7,7 @@ export const findNearestAvailableDriver = async (rideId: string) => {
     if (!ride) throw new Error("Ride not found");
 
     const driver = await Driver.findOne({
-        online: true,
+        status: "AVAILABLE",
         approved: true,
         activeRide: null,
         _id: { $nin: ride.rejectedDrivers },

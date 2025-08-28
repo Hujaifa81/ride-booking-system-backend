@@ -3,7 +3,9 @@ import { envVars } from './app/config/env';
 import mongoose from 'mongoose';
 import app from './app';
 import { seedAdmin } from './app/utils/seedAdmin';
-import './app/agenda/agenda';
+import { agenda } from './app/agenda/agenda';
+import './app/agenda/jobs/ride.job';
+
 
 
 let server: Server
@@ -24,6 +26,7 @@ const startServer = async () => {
 (async () => {
     await startServer();
     await seedAdmin();
+    await agenda.start();
     
 })()
 

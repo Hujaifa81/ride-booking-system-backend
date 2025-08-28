@@ -49,13 +49,13 @@ const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
         ride.status = RideStatus.PENDING;
         await ride.save();
         // Start repeating job to retry assignment every 30 sec
-        await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id });
+        await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id.toString() });
         return ride;
     }
     ride.driver = driver?._id;
     await ride.save();
     // Schedule job to check driver response after 1 minute
-    await agenda.schedule("1 minute", "driverResponseTimeout", { rideId: ride._id, driverId: driver._id });
+    await agenda.schedule("1 minute", "driverResponseTimeout", { rideId: ride._id.toString(), driverId: driver._id.toString() });
     
     return ride;
 }
@@ -180,7 +180,7 @@ const rejectRide = async (rideId: string, token: JwtPayload) => {
         ride.driver = newDriver._id;
         await ride.save();
         // Schedule new timeout job for the newly assigned driver
-        await agenda.schedule("1 minute", "driverResponseTimeout", { rideId: ride._id, driverId: newDriver._id });
+        await agenda.schedule("1 minute", "driverResponseTimeout", { rideId: ride._id.toString(), driverId: newDriver._id.toString() });
 
     } else {
         ride.status = RideStatus.PENDING;
@@ -191,7 +191,7 @@ const rejectRide = async (rideId: string, token: JwtPayload) => {
         });
         await ride.save();
         // Start repeating job to retry assignment every 30 sec
-        await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id });
+        await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id.toString()});
 
     }
 
@@ -200,21 +200,23 @@ const rejectRide = async (rideId: string, token: JwtPayload) => {
 
 const acceptRide = async (rideId: string, token: JwtPayload) => {
     const ride = await Ride.findById(rideId);
+    const driver= await Driver.findOne({ user: token.userId });
 
     if (!ride) {
         throw new AppError(httpStatus.NOT_FOUND, "Ride not found");
     }
-
-    if (ride.driver?.toString() !== token.userId) {
+    
+    if (ride.driver?.toString() !== driver?._id.toString()) {
         throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to accept this ride");
     }
+
 
     if (ride.status !== RideStatus.REQUESTED) {
         throw new AppError(httpStatus.BAD_REQUEST, "You can only accept a ride that is in requested status");
     }
     
     const activeVehicle = await Vehicle.findOne({ user: token.userId, isActive: true });
-    const driver = await Driver.findOne({ user: token.userId });
+    
 
     ride.status = RideStatus.ACCEPTED;
     ride.statusHistory.push({
@@ -230,8 +232,8 @@ const acceptRide = async (rideId: string, token: JwtPayload) => {
         await driver.save();
     }
         // Cancel any existing timeout job for this ride and driver
-        await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id, "data.driverId": token.userId });
-        await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id });
+        await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString(), "data.driverId": token.userId });
+        await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id.toString()});
     return ride;
 }
 
