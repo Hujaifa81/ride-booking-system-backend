@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { RideStatus } from "../../modules/ride/ride.interface";
 import { Ride } from "../../modules/ride/ride.model";
 import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";

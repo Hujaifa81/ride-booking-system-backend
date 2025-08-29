@@ -8,8 +8,9 @@ import { Role } from "./user.interface";
 const router=Router();
 
 router.post('/register',validateRequest(createUserZodSchema),userController.register)
-router.get('/get-all',checkAuth(Role.ADMIN),userController.getAllUsers)
+router.get('/get',checkAuth(Role.ADMIN),userController.getAllUsers)
 //block or activate user
 router.patch('/is-active/:userId',validateRequest(updateUserZodSchema),checkAuth(Role.ADMIN),userController.isActiveChange)
+router.patch('/role/:userId',validateRequest(updateUserZodSchema),checkAuth(Role.ADMIN),userController.updateUserRole)
 
 export const userRoutes = router;

@@ -99,6 +99,18 @@ const driverSuspendedStatusChange=catchAsync(async(req:Request, res:Response, ne
         data:driver
     })
 })
+
+const updateDriverRating=catchAsync(async(req:Request, res:Response, next:NextFunction)=>{
+    const driverId=req.params.driverId;
+    const {rating,rideId}=req.body;
+    const result=await DriverService.updateDriverRating(driverId,rating,rideId,req.user as JwtPayload);
+    sendResponse(res,{
+        statusCode:httpStatus.OK,
+        message:`Driver rated successfully`,
+        success:true,
+        data:result
+    })
+})
 export const driverController = {
     createDriver,
     getAllDrivers,
@@ -106,5 +118,6 @@ export const driverController = {
     driverStatusChange,
     driverLocationUpdate,
     getDriverEarningsHistory,
-    driverSuspendedStatusChange
+    driverSuspendedStatusChange,
+    updateDriverRating
 }

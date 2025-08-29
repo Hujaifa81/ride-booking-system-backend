@@ -37,4 +37,6 @@ export interface IRide {
     canceledReason?: string;
     rejectedDrivers: Types.ObjectId[];
     createdAt?: Date;
+    rating?: number;
+    feedback?: string;
 }

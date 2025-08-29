@@ -18,8 +18,13 @@ export const updateRideZodSchema = z.object({
         status: z.enum(Object.values(RideStatus)),
         timestamp: z.date({ error: "Timestamp must be a valid date" }),
         by: z.string().regex(/^[0-9a-fA-F]{24}$/, { message: "Invalid ObjectId format." })
-    })).optional()
+    })).optional(),
     
+});
+
+export const createFeedbackZodSchema = z.object({
+    feedback: z.string({ error: "Feedback must be a string" }).max(500, { message: "Feedback cannot exceed 500 characters." }),
+    rideId: z.string().regex(/^[0-9a-fA-F]{24}$/, { message: "Invalid Ride ID format." })
 });
 
 export const rideStatusChangeZodSchema = z.object({
@@ -27,5 +32,5 @@ export const rideStatusChangeZodSchema = z.object({
 });
 
 export const cancelRideZodSchema = z.object({
-    canceledReason: z.string({ error: "Canceled reason must be a string" }).max(200, { message: "Canceled reason cannot exceed 200 characters." })
+    canceledReason: z.string({ error: "Canceled reason must be a string" }).max(200, { message: "Canceled reason cannot exceed 200 characters." }).optional().default("")
 });

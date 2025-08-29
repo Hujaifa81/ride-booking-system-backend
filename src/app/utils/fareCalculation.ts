@@ -7,7 +7,8 @@ export const approxFareCalculation = (pickupLocation: ILocation, dropOffLocation
     const perKm = 25;
     const timeInMinutes = (km / 40) * 60; // Assuming average speed of 40 km/h
     const perMinute = 5;
-    const approxTotalFare =  (perKm * km) + (perMinute * timeInMinutes);
+    const base=50
+    const approxTotalFare =base + (perKm * km) + (perMinute * timeInMinutes);
     return Math.round(approxTotalFare);
 }
 

@@ -222,8 +222,13 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
         if (String(driver._id) !== String(ride.driver)) {
             throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to cancel this ride.");
         }
-        if (ride.status === RideStatus.CANCELLED_BY_DRIVER || ride.status === RideStatus.CANCELLED_BY_RIDER || ride.status === RideStatus.CANCELLED_BY_ADMIN) {
+        if (ride.status === RideStatus.CANCELLED_BY_DRIVER || ride.status === RideStatus.CANCELLED_BY_RIDER || ride.status === RideStatus.CANCELLED_BY_ADMIN || ride.status === RideStatus.CANCELLED_FOR_PENDING_TIME_OVER) {
             throw new AppError(httpStatus.BAD_REQUEST, "This ride has already been canceled.");
+        }
+        {
+            if (ride.status === RideStatus.REQUESTED) {
+                throw new AppError(httpStatus.BAD_REQUEST, "You cannot cancel a ride that is in REQUESTED status.First accept the ride.");
+            }
         }
         if (ride.status === RideStatus.COMPLETED) {
             throw new AppError(httpStatus.BAD_REQUEST, "You cannot cancel a completed ride.");
@@ -256,7 +261,7 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
         if (String(ride.user) !== token.userId) {
             throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to cancel this ride.");
         }
-        if (ride.status === RideStatus.CANCELLED_BY_DRIVER || ride.status === RideStatus.CANCELLED_BY_RIDER || ride.status === RideStatus.CANCELLED_BY_ADMIN) {
+        if (ride.status === RideStatus.CANCELLED_BY_DRIVER || ride.status === RideStatus.CANCELLED_BY_RIDER || ride.status === RideStatus.CANCELLED_BY_ADMIN || ride.status === RideStatus.CANCELLED_FOR_PENDING_TIME_OVER) {
             throw new AppError(httpStatus.BAD_REQUEST, "This ride has already been canceled.");
         }
         if (ride.status === RideStatus.COMPLETED) {
@@ -285,7 +290,7 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
     }
 
     if (token.role === 'ADMIN') {
-        if (ride.status === RideStatus.CANCELLED_BY_DRIVER || ride.status === RideStatus.CANCELLED_BY_RIDER || ride.status === RideStatus.CANCELLED_BY_ADMIN) {
+        if (ride.status === RideStatus.CANCELLED_BY_DRIVER || ride.status === RideStatus.CANCELLED_BY_RIDER || ride.status === RideStatus.CANCELLED_BY_ADMIN || ride.status === RideStatus.CANCELLED_FOR_PENDING_TIME_OVER) {
             throw new AppError(httpStatus.BAD_REQUEST, "This ride has already been canceled.");
         }
         if (ride.status === RideStatus.COMPLETED) {

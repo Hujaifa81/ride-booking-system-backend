@@ -34,9 +34,21 @@ const isActiveChange=catchAsync(async(req:Request, res:Response, next:NextFuncti
         data:user
     })
 })
+const updateUserRole=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
+    const userId=req.params.userId;
+    const {role}=req.body;
+    const user=await UserService.updateUserRole(userId,role);
+    sendResponse(res,{
+        statusCode:httpStatus.OK,
+        message:`User role updated to ${role} successfully`,
+        success:true,
+        data:user
+    })
+})
 export const userController = {
     register,
     getAllUsers,
-    isActiveChange
+    isActiveChange,
+    updateUserRole
 
 }

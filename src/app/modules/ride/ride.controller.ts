@@ -118,6 +118,16 @@ const acceptRide=catchAsync(async (req: Request, res: Response, next: NextFuncti
     });
 })
 
+const createFeedback=catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { rideId, feedback }=req.body;
+    const ride=await RideService.createFeedback(rideId,feedback,req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Feedback submitted successfully.`,
+        success: true,
+        data: ride
+    });
+})
 export const RideController = {
     createRide,
     rideStatusChangeAfterRideAccepted,
@@ -126,6 +136,7 @@ export const RideController = {
     getSingleRideDetails,
     getAllRides,
     rejectRide,
-    acceptRide
+    acceptRide,
+    createFeedback
     
 }
