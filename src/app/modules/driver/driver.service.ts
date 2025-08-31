@@ -9,6 +9,8 @@ import { Role } from "../user/user.interface";
 import { Ride } from "../ride/ride.model";
 import { driverEarningCalculation } from "../../utils/fareCalculation";
 import { RideStatus } from "../ride/ride.interface";
+import { QueryBuilder } from "../../utils/queryBuilder";
+import { driverSearchableFields } from "./driver.constant";
 
 
 const createDriver = async (payload: Partial<IDriver>, token: JwtPayload) => {
@@ -41,10 +43,23 @@ const createDriver = async (payload: Partial<IDriver>, token: JwtPayload) => {
   return driver;
 }
 
-const getAllDrivers = async () => {
-  const drivers = await Driver.find().populate('user');
+const getAllDrivers = async (query:Record<string,string>) => {
+  const queryBuilder=new QueryBuilder(Driver.find(),query)
+  const drivers = await queryBuilder
+  .geoLocationSearch()
+  .search(driverSearchableFields)
+  .filter()
+  .sort()
+  .fields()
+  .paginate()
+
+  const [data,meta]=await Promise.all([
+    drivers.build(),
+    queryBuilder.getMeta()
+  ])
+
   const driversWithCars = await Promise.all(
-    drivers.map(async (driver) => {
+    data.map(async (driver) => {
       const vehicles = await Vehicle.find({ user: driver.user });
       return {
         ...driver.toObject(),
@@ -52,7 +67,7 @@ const getAllDrivers = async () => {
       };
     })
   );
-  return driversWithCars;
+  return {meta,data:driversWithCars };
 }
 
 const driverApprovedStatusChange = async (driverId: string) => {

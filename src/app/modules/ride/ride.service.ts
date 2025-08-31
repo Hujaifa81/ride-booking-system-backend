@@ -2,7 +2,7 @@
 import { JwtPayload } from "jsonwebtoken";
 import { IRide, RideStatus } from "./ride.interface";
 import { Ride } from "./ride.model";
-import { approxFareCalculation } from "../../utils/fareCalculation";
+import { calculateApproxFareWithSurge } from "../../utils/fareCalculation";
 import httpStatus from "http-status-codes";
 import AppError from "../../errorHelpers/AppError";
 import { cancelRide, completedRide, driverArrived, goingToPickup, inTransitRide, reachedDestinationRide } from "../../utils/rideStatusChange";
@@ -37,7 +37,7 @@ const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
     let approxFare = 0;
 
     if (rideData.pickupLocation && rideData.dropOffLocation) {
-        approxFare = approxFareCalculation(rideData.pickupLocation, rideData.dropOffLocation);
+        approxFare =await calculateApproxFareWithSurge(rideData.pickupLocation, rideData.dropOffLocation);
     }
     rideData.approxFare = approxFare;
 

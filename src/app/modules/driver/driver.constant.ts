@@ -1,0 +1,1 @@
+export const driverSearchableFields = ["licenseNumber", "status"];

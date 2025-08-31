@@ -21,12 +21,12 @@ const createDriver = catchAsync(async (req: Request, res: Response, next: NextFu
 })
 
 const getAllDrivers = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const drivers = await DriverService.getAllDrivers();
+    const result = await DriverService.getAllDrivers(req.query as Record<string, string>);
     sendResponse(res, {
         statusCode: httpStatus.OK,
         message: "Drivers fetched successfully",
         success: true,
-        data: drivers
+        data: result
     })
 })
 

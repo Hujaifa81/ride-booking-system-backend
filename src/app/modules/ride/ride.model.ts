@@ -1,5 +1,6 @@
 import { model, Schema } from "mongoose";
 import { IRide, IStatusLog, RideStatus } from "./ride.interface";
+import { locationSchema } from "../driver/driver.model";
 
 const statusLogSchema = new Schema<IStatusLog>({
     status: { type: String, enum: Object.values(RideStatus), required: true },
@@ -11,8 +12,8 @@ const statusLogSchema = new Schema<IStatusLog>({
 })
 
 const rideSchema = new Schema<IRide>({
-    pickupLocation: { type: Object, required: true },
-    dropOffLocation: { type: Object, required: true },
+    pickupLocation: { type: locationSchema, required: true },
+    dropOffLocation: { type: locationSchema, required: true },
     approxFare: { type: Number },
     finalFare: { type: Number },
     distance: { type: Number },
@@ -30,4 +31,7 @@ const rideSchema = new Schema<IRide>({
     timestamps: true,
     versionKey: false
 })
+
+rideSchema.index({ location: "2dsphere" });
+
 export const Ride = model<IRide>('Ride', rideSchema);
