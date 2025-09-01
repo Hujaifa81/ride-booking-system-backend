@@ -9,7 +9,7 @@ import { RideController } from "./ride.controller";
 const router = Router();
 
 router.post("/create", validateRequest(createRideZodSchema), checkAuth(Role.RIDER), RideController.createRide);
-router.patch("/status-change-after-ride-accepted/:rideId",validateRequest(rideStatusChangeZodSchema), checkAuth(Role.DRIVER,Role.ADMIN), RideController.rideStatusChangeAfterRideAccepted);
+router.patch("/status-change/:rideId",validateRequest(rideStatusChangeZodSchema), checkAuth(Role.DRIVER,Role.ADMIN), RideController.rideStatusChangeAfterRideAccepted);
 router.patch("/cancel/:rideId", validateRequest(cancelRideZodSchema),checkAuth(...Object.values(Role)), RideController.cancelRide);
 router.get("/all", checkAuth(Role.ADMIN), RideController.getAllRides);
 router.get("/:rideId", checkAuth(...Object.values(Role)), RideController.getSingleRideDetails);
