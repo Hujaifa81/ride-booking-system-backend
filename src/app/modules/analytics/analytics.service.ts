@@ -4,23 +4,34 @@ import { Role } from "../user/user.interface";
 import { User } from "../user/user.model";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export interface DateRange {
-    from?: string; // ISO date string
-    to?: string;   // ISO date string
+export interface IFilterParams {
+    from?: string;  // ISO date string
+    to?: string;    // ISO date string
+    driverId?: string;
+    userId?: string;
 }
 
-export const makeDateMatch = ({ from, to }: DateRange) => {
+/**
+ * Build a MongoDB $match query based on filters.
+ */
+export const makeRideMatch = ({ from, to, driverId, userId }: IFilterParams) => {
     const match: any = {};
+
     if (from || to) {
         match.createdAt = {};
         if (from) match.createdAt.$gte = new Date(from);
         if (to) match.createdAt.$lte = new Date(to);
     }
-    return match;
-}
 
-const getKpis = async (range: DateRange) => {
-    const createdMatch = makeDateMatch(range);
+    if (driverId) match.driver = driverId;
+    if (userId) match.user = userId;
+
+    return match;
+};
+
+/* ---------------- KPI Metrics ---------------- */
+const getKpis = async (range: IFilterParams) => {
+    const rideMatch = makeRideMatch(range);
 
     const [
         totalRides,
@@ -29,15 +40,15 @@ const getKpis = async (range: DateRange) => {
         ridesByStatus,
         revenueAgg,
     ] = await Promise.all([
-        Ride.countDocuments(createdMatch),
+        Ride.countDocuments(rideMatch),
         User.countDocuments({ role: Role.RIDER }),
         User.countDocuments({ role: Role.DRIVER }),
         Ride.aggregate([
-            { $match: createdMatch },
+            { $match: rideMatch },
             { $group: { _id: "$status", count: { $sum: 1 } } },
         ]),
         Ride.aggregate([
-            { $match: { ...createdMatch, status: "COMPLETED" } },
+            { $match: { ...rideMatch, status: RideStatus.COMPLETED } },
             { $group: { _id: null, revenue: { $sum: "$finalFare" } } },
         ]),
     ]);
@@ -54,14 +65,15 @@ const getKpis = async (range: DateRange) => {
         ridesByStatus: statusMap,
         totalRevenue: revenueAgg[0]?.revenue ?? 0,
     };
-}
+};
 
-const getRidesTrend = async (range: DateRange, granularity: "day" | "month" = "day") => {
-    const createdMatch = makeDateMatch(range);
+/* ---------------- Ride Trends ---------------- */
+const getRidesTrend = async (range: IFilterParams, granularity: "day" | "month" = "day") => {
+    const rideMatch = makeRideMatch(range);
     const format = granularity === "day" ? "%Y-%m-%d" : "%Y-%m";
 
     const trend = await Ride.aggregate([
-        { $match: createdMatch },
+        { $match: rideMatch },
         {
             $group: {
                 _id: { $dateToString: { format, date: "$createdAt" } },
@@ -72,30 +84,34 @@ const getRidesTrend = async (range: DateRange, granularity: "day" | "month" = "d
     ]);
 
     return trend.map(t => ({ period: t._id, count: t.count }));
-}
-const getRevenueTrend = async (range: DateRange, granularity: "day" | "month" = "day") => {
-    const createdMatch = makeDateMatch(range);
+};
+
+/* ---------------- Revenue Trends ---------------- */
+const getRevenueTrend = async (range: IFilterParams, granularity: "day" | "month" = "day") => {
+    const rideMatch = makeRideMatch(range);
     const format = granularity === "day" ? "%Y-%m-%d" : "%Y-%m";
 
     const trend = await Ride.aggregate([
-        { $match: { ...createdMatch, status: RideStatus.COMPLETED } },
+        { $match: { ...rideMatch, status: RideStatus.COMPLETED } },
         {
             $group: {
                 _id: { $dateToString: { format, date: "$createdAt" } },
-                revenue: { $sum: "$finalFare" },
+                grossRevenue: { $sum: "$finalFare" },
+                netRevenue: { $sum: { $multiply: ["$finalFare", 0.2] } },
             },
         },
         { $sort: { _id: 1 } },
     ]);
 
-    return trend.map(t => ({ period: t._id, revenue: t.revenue }));
-}
+    return trend.map(t => ({ period: t._id, grossRevenue: t.grossRevenue, netRevenue: t.netRevenue }));
+};
 
-export async function getTopDrivers(range: DateRange, limit = 10) {
-    const createdMatch = makeDateMatch(range);
+/* ---------------- Top Drivers ---------------- */
+export async function getTopDrivers(range: IFilterParams, limit = 10) {
+    const rideMatch = makeRideMatch(range);
 
     const rows = await Ride.aggregate([
-        { $match: { ...createdMatch, status: RideStatus.COMPLETED, driver: { $ne: null } } },
+        { $match: { ...rideMatch, status: RideStatus.COMPLETED, driver: { $ne: null } } },
         { $group: { _id: "$driver", completedRides: { $sum: 1 }, revenue: { $sum: "$finalFare" } } },
         { $sort: { completedRides: -1, revenue: -1 } },
         { $limit: limit },
@@ -123,70 +139,92 @@ export async function getTopDrivers(range: DateRange, limit = 10) {
     return rows;
 }
 
-export const getTopRiders = async (range: DateRange, limit = 10) => {
-  const createdMatch = makeDateMatch(range);
-
-  const rows = await Ride.aggregate([
-    { 
-      $match: { 
-        ...createdMatch, 
-        status: RideStatus.COMPLETED, 
-        user: { $ne: null } 
-      } 
-    },
-    { 
-      $group: { 
-        _id: "$user", 
-        trips: { $sum: 1 }, 
-        totalSpent: { $sum: "$finalFare" } 
-      } 
-    },
-    { $sort: { totalSpent: -1, trips: -1 } },
-    { $limit: limit },
-    {
-      $lookup: {
-        from: "users",
-        localField: "_id",
-        foreignField: "_id",
-        as: "rider",
-      },
-    },
-    { $unwind: "$rider" },
-    {
-      $project: {
-        _id: 0,
-        riderId: "$rider._id",
-        name: "$rider.name",
-        phone: "$rider.phone",
-        trips: 1,
-        totalSpent: 1,
-      },
-    },
-  ]);
-
-  return rows;
-};
-
-
-export const getCancellationBreakdown=async(range: DateRange)=>{
-    const createdMatch = makeDateMatch(range);
+/* ---------------- Top Riders ---------------- */
+export const getTopRiders = async (range: IFilterParams, limit = 10) => {
+    const rideMatch = makeRideMatch(range);
 
     const rows = await Ride.aggregate([
-        { $match: { ...createdMatch, status: { $in: [RideStatus.CANCELLED_BY_ADMIN, RideStatus.CANCELLED_BY_DRIVER, RideStatus.CANCELLED_BY_RIDER, RideStatus.CANCELLED_FOR_PENDING_TIME_OVER] } } },
+        {
+            $match: {
+                ...rideMatch,
+                status: RideStatus.COMPLETED,
+                user: { $ne: null },
+            },
+        },
+        {
+            $group: {
+                _id: "$user",
+                trips: { $sum: 1 },
+                totalSpent: { $sum: "$finalFare" },
+            },
+        },
+        { $sort: { totalSpent: -1, trips: -1 } },
+        { $limit: limit },
+        {
+            $lookup: {
+                from: "users",
+                localField: "_id",
+                foreignField: "_id",
+                as: "rider",
+            },
+        },
+        { $unwind: "$rider" },
+        {
+            $project: {
+                _id: 0,
+                riderId: "$rider._id",
+                name: "$rider.name",
+                phone: "$rider.phone",
+                trips: 1,
+                totalSpent: 1,
+            },
+        },
+    ]);
+
+    return rows;
+};
+
+/* ---------------- Cancellation Breakdown ---------------- */
+export const getCancellationBreakdown = async (range: IFilterParams) => {
+    const rideMatch = makeRideMatch(range);
+
+    const rows = await Ride.aggregate([
+        {
+            $match: {
+                ...rideMatch,
+                status: {
+                    $in: [
+                        RideStatus.CANCELLED_BY_ADMIN,
+                        RideStatus.CANCELLED_BY_DRIVER,
+                        RideStatus.CANCELLED_BY_RIDER,
+                        RideStatus.CANCELLED_FOR_PENDING_TIME_OVER,
+                    ],
+                },
+            },
+        },
         { $group: { _id: "$canceledReason", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
     ]);
 
     return rows.map(r => ({ reason: r._id ?? "UNKNOWN", count: r.count }));
-}
+};
 
-export const getSystemFunnel=async(range: DateRange)=>{
-    const createdMatch = makeDateMatch(range);
+/* ---------------- System Funnel ---------------- */
+export const getSystemFunnel = async (range: IFilterParams) => {
+    const rideMatch = makeRideMatch(range);
 
-    const stages = [RideStatus.REQUESTED, RideStatus.ACCEPTED, RideStatus.GOING_TO_PICK_UP, RideStatus.DRIVER_ARRIVED, RideStatus.IN_TRANSIT, RideStatus.REACHED_DESTINATION, RideStatus.COMPLETED]
+    const stages = [
+        RideStatus.REQUESTED,
+        RideStatus.ACCEPTED,
+        RideStatus.GOING_TO_PICK_UP,
+        RideStatus.DRIVER_ARRIVED,
+        RideStatus.IN_TRANSIT,
+        RideStatus.REACHED_DESTINATION,
+        RideStatus.COMPLETED,
+    ];
 
     const rows = await Ride.aggregate([
-        { $match: createdMatch },
+        { $match: rideMatch },
         { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
@@ -196,8 +234,9 @@ export const getSystemFunnel=async(range: DateRange)=>{
     }, {});
 
     return stages.map(s => ({ stage: s, count: map[s] ?? 0 }));
-}
+};
 
+/* ---------------- Export ---------------- */
 export const Analytics = {
     getKpis,
     getRidesTrend,
@@ -205,5 +244,5 @@ export const Analytics = {
     getTopDrivers,
     getTopRiders,
     getCancellationBreakdown,
-    getSystemFunnel
+    getSystemFunnel,
 };

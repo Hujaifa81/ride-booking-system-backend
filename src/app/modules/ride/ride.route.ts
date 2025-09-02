@@ -12,7 +12,7 @@ router.post("/create", validateRequest(createRideZodSchema), checkAuth(Role.RIDE
 router.patch("/status-change/:rideId",validateRequest(rideStatusChangeZodSchema), checkAuth(Role.DRIVER,Role.ADMIN), RideController.rideStatusChangeAfterRideAccepted);
 router.patch("/cancel/:rideId", validateRequest(cancelRideZodSchema),checkAuth(...Object.values(Role)), RideController.cancelRide);
 router.get("/all", checkAuth(Role.ADMIN), RideController.getAllRides);
-router.get("/:rideId", checkAuth(...Object.values(Role)), RideController.getSingleRideDetails);
+router.get("/single-ride/:rideId", checkAuth(...Object.values(Role)), RideController.getSingleRideDetails);
 router.get("/history/:userId", checkAuth(...Object.values(Role)), RideController.getRideHistory);
 router.patch("/reject/:rideId",checkAuth(Role.DRIVER),RideController.rejectRide);
 router.patch("/accept/:rideId",checkAuth(Role.DRIVER),RideController.acceptRide);

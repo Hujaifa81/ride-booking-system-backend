@@ -48,10 +48,9 @@ const driverApprovedStatusChange = catchAsync(async (req: Request, res: Response
 })
 
 const driverStatusChange = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const driverId = req.params.driverId;
     const { status } = req.body;
 
-    const driver=await DriverService.driverStatusChange(driverId,status,req.user as JwtPayload);
+    const driver=await DriverService.driverStatusChange(status,req.user as JwtPayload);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -62,10 +61,9 @@ const driverStatusChange = catchAsync(async (req: Request, res: Response, next: 
 })
 
 const driverLocationUpdate = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const driverId = req.params.driverId;
     const location = req.body;
 
-    const driver = await DriverService.driverLocationUpdate(driverId, location,req.user as JwtPayload);
+    const driver = await DriverService.driverLocationUpdate(location,req.user as JwtPayload);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

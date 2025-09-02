@@ -23,7 +23,7 @@ const rideSchema = new Schema<IRide>({
     vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle', default: null },
     status: { type: String, enum: Object.values(RideStatus), default: RideStatus.REQUESTED },
     statusHistory: [{ type: statusLogSchema, default: []}],
-    canceledReason: { type: String },
+    canceledReason: { type: String, max: 500, default:"UNKNOWN" },
     rejectedDrivers: [{ type: Schema.Types.ObjectId, ref: 'Driver', default: [] }],
     rating: { type: Number, min: 1, max: 5, default: null },
     feedback: { type: String, max: 500 }

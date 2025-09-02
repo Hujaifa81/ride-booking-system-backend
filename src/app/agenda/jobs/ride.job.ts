@@ -51,8 +51,8 @@ agenda.define("checkPendingRide", async (job: any) => {
   console.log(rideId); const ride = await Ride.findById(rideId);
   if (!ride || ride.status !== RideStatus.PENDING) return;
   const now = Date.now(); const createdAt = new Date(ride.createdAt as Date).getTime();
-  // Cancel ride if pending > 2 minute from creation
-  if (now - createdAt >= 2 * 60 * 1000) {
+  // Cancel ride if pending > 10 minute from creation
+  if (now - createdAt >= 10 * 60 * 1000) {
     ride.status = RideStatus.CANCELLED_FOR_PENDING_TIME_OVER;
     ride.statusHistory.push({
       status: RideStatus.CANCELLED_FOR_PENDING_TIME_OVER,
@@ -62,13 +62,13 @@ agenda.define("checkPendingRide", async (job: any) => {
     await ride.save();
     await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id.toString() });
     await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString() });
-    console.log(`Ride ${rideId} cancelled after 2 mins`); return;
+    console.log(`Ride ${rideId} cancelled after 10 mins`); return;
   }
   // Try to assign a driver again 
   const driver = await findNearestAvailableDriver(rideId.toString());
-  console.log(driver);
+
   if (driver) {
-    console.log("driver paichi");
+    
     ride.driver = driver._id;
     ride.status = RideStatus.REQUESTED;
     await ride.save();

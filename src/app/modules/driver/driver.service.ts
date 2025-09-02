@@ -43,17 +43,17 @@ const createDriver = async (payload: Partial<IDriver>, token: JwtPayload) => {
   return driver;
 }
 
-const getAllDrivers = async (query:Record<string,string>) => {
-  const queryBuilder=new QueryBuilder(Driver.find(),query)
+const getAllDrivers = async (query: Record<string, string>) => {
+  const queryBuilder = new QueryBuilder(Driver.find(), query)
   const drivers = await queryBuilder
-  .geoLocationSearch()
-  .search(driverSearchableFields)
-  .filter()
-  .sort()
-  .fields()
-  .paginate()
+    .geoLocationSearch()
+    .search(driverSearchableFields)
+    .filter()
+    .sort()
+    .fields()
+    .paginate()
 
-  const [data,meta]=await Promise.all([
+  const [data, meta] = await Promise.all([
     drivers.build(),
     queryBuilder.getMeta()
   ])
@@ -67,7 +67,7 @@ const getAllDrivers = async (query:Record<string,string>) => {
       };
     })
   );
-  return {meta,data:driversWithCars };
+  return { meta, data: driversWithCars };
 }
 
 const driverApprovedStatusChange = async (driverId: string) => {
@@ -89,22 +89,29 @@ const driverApprovedStatusChange = async (driverId: string) => {
   return { driver, user };
 }
 
-const driverStatusChange = async (driverId: string, updateStatus: string, token: JwtPayload) => {
+const driverStatusChange = async (updateStatus: string, token: JwtPayload) => {
 
-  const driver = await Driver.findById(driverId);
+  const driver = await Driver.findOne({ user: token.userId });
   const vehicles = await Vehicle.find({ user: token.userId });
-  console.log(driver?.user?.toString(), token.userId);
-  if (token.role === Role.DRIVER) {
-    if (driver?.user?.toString() !== token.userId) {
-      throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to change this driver's status");
-    }
-  }
+
   if (!driver) {
     throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
   }
 
+  if (driver?.user?.toString() !== token.userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "You do not have permission to change this driver's status");
+  }
+
+  if (driver.isSuspended) {
+    throw new AppError(httpStatus.FORBIDDEN, "You are suspended by admin. You cannot change your status.");
+  }
+
   if (!driver.approved) {
     throw new AppError(httpStatus.BAD_REQUEST, "User is not approved as a driver yet.");
+  }
+
+  if (driver.status === DriverStatus.ON_TRIP) {
+    throw new AppError(httpStatus.BAD_REQUEST, "You cannot change status while on trip");
   }
 
   if (updateStatus === DriverStatus.AVAILABLE) {
@@ -117,53 +124,37 @@ const driverStatusChange = async (driverId: string, updateStatus: string, token:
     }
   }
 
-  if (token.role === Role.DRIVER) {
-    if (driver.status === DriverStatus.ON_TRIP) {
-      throw new AppError(httpStatus.BAD_REQUEST, "You cannot change status while on trip");
-    }
-
-    if (updateStatus === DriverStatus.ON_TRIP) {
-      throw new AppError(httpStatus.BAD_REQUEST, "You cannot change status to ON_TRIP. This is done by the system when a ride is accepted.");
-    }
-
-    console.log('updateStatus:', updateStatus, 'DriverStatus:', DriverStatus);
-    if ((updateStatus !== DriverStatus.AVAILABLE) && (updateStatus !== DriverStatus.OFFLINE)) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Invalid status change request");
-    }
-
-
-    driver.status = updateStatus as DriverStatus;
-    await driver.save();
-
-    if (driver.status === DriverStatus.OFFLINE) {
-      driver.location = null;
-      await driver.save();
-    }
+  if (updateStatus === DriverStatus.ON_TRIP) {
+    throw new AppError(httpStatus.BAD_REQUEST, "You cannot change status to ON_TRIP. This is done by the system when a ride is accepted.");
   }
 
-  if (token.role === Role.ADMIN) {
-    if (!Object.values(DriverStatus).includes(updateStatus as DriverStatus)) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Invalid status change request");
-    }
 
-    driver.status = updateStatus as DriverStatus;
-    await driver.save();
+  if ((updateStatus !== DriverStatus.AVAILABLE) && (updateStatus !== DriverStatus.OFFLINE)) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid status change request");
   }
 
+
+  driver.status = updateStatus as DriverStatus;
+  await driver.save();
+
+  if (driver.status === DriverStatus.OFFLINE) {
+    driver.location = null;
+    await driver.save();
+  }
 
   return driver;
 }
 
-const driverLocationUpdate = async (driverId: string, location: ILocation, token: JwtPayload) => {
+const driverLocationUpdate = async (location: ILocation, token: JwtPayload) => {
 
-  const driver = await Driver.findById(driverId);
+  const driver = await Driver.findOne({ user: token.userId });
 
   if (!driver) {
     throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
   }
 
   if (driver.user.toString() !== token.userId) {
-    throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to update this driver's location");
+    throw new AppError(httpStatus.UNAUTHORIZED, "You do not have permission to update this driver's location");
   }
 
   if (driver.status === DriverStatus.ON_TRIP) {

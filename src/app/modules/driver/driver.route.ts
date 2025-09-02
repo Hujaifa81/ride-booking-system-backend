@@ -7,11 +7,11 @@ import { validateRequest } from "../../middlewares/validateRequest";
 
 const router = Router();
 
-router.post("/create",validateRequest(createDriverZodSchema),checkAuth(Role.RIDER,Role.ADMIN),driverController.createDriver);
-router.get("/get",checkAuth(Role.ADMIN,Role.RIDER,Role.DRIVER), driverController.getAllDrivers);
-router.patch("/approve-status/:driverId",checkAuth(Role.RIDER), driverController.driverApprovedStatusChange);
-router.patch("/availability-status/:driverId",checkAuth(Role.DRIVER,Role.ADMIN), driverController.driverStatusChange);
-router.patch("/location/:driverId",validateRequest(updateLocationZodSchema),checkAuth(Role.DRIVER), driverController.driverLocationUpdate);
+router.post("/create",validateRequest(createDriverZodSchema),checkAuth(Role.RIDER),driverController.createDriver);
+router.get("/all",checkAuth(Role.ADMIN,Role.RIDER,Role.DRIVER), driverController.getAllDrivers);
+router.patch("/approve-status/:driverId",checkAuth(Role.ADMIN), driverController.driverApprovedStatusChange);
+router.patch("/availability-status",checkAuth(Role.DRIVER), driverController.driverStatusChange);
+router.patch("/location",validateRequest(updateLocationZodSchema),checkAuth(Role.DRIVER), driverController.driverLocationUpdate);
 router.get("/earnings-history/:driverId",checkAuth(Role.DRIVER,Role.ADMIN), driverController.getDriverEarningsHistory);
 router.patch("/is-suspended/:driverId",checkAuth(Role.ADMIN), driverController.driverSuspendedStatusChange);
 router.patch("/rating/:driverId",validateRequest(driverRatingZodSchema),checkAuth(Role.RIDER), driverController.updateDriverRating);
