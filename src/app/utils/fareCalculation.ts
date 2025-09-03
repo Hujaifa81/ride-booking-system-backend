@@ -2,6 +2,7 @@ import { DriverStatus, ILocation } from "../modules/driver/driver.interface";
 import { Driver } from "../modules/driver/driver.model";
 import { RideStatus } from "../modules/ride/ride.interface";
 import { Ride } from "../modules/ride/ride.model";
+import { IsActive } from "../modules/user/user.interface";
 import { kmCalculation } from "./kmCalculation";
 import { getSurgeMultiplier, getTimeBasedSurge } from "./surge";
 
@@ -41,30 +42,39 @@ export const PenaltyFareForExceedingTime = (startTime: Date, completedTime: Date
 
 
 
-export const calculateApproxFareWithSurge =async (pickupLocation: ILocation, dropOffLocation: ILocation): Promise<number> => {
+export const calculateApproxFareWithSurge = async (pickupLocation: ILocation, dropOffLocation: ILocation): Promise<number> => {
 
-    //find all available drivers within 5km radius
-    const totalDriversNearBy = await Driver.countDocuments({
+    const drivers = await Driver.find({
         status: DriverStatus.AVAILABLE,
         approved: true,
         activeRide: null,
+        isSuspended: { $ne: true }, // avoid suspended drivers
         location: {
             $near: {
                 $geometry: { type: "Point", coordinates: pickupLocation.coordinates },
-                $maxDistance: 5000 // 5 km radius
-            }
-        }
+                $maxDistance: 5000, // 5 km radius
+            },
+        },
     })
+        .populate({
+            path: "user",
+            match: { isActive: IsActive.ACTIVE, isDeleted: false }, // filter inactive users
+        })
+        .lean();
+
+    const filteredDrivers = drivers.filter((d) => d.user !== null);
+    const totalDriversNearBy = filteredDrivers.length;
+
 
     // Active ride requests nearby
     const totalActiveRides = await Ride.countDocuments({
-      status:{ $in: [RideStatus.PENDING,RideStatus.REQUESTED] },
-      pickupLocation: {
-        $near: {
-          $geometry: { type: "Point", coordinates: pickupLocation.coordinates },
-          $maxDistance: 3000,
+        status: { $in: [RideStatus.PENDING, RideStatus.REQUESTED] },
+        pickupLocation: {
+            $near: {
+                $geometry: { type: "Point", coordinates: pickupLocation.coordinates },
+                $maxDistance: 3000,
+            },
         },
-      },
     });
 
     const demandSurge = getSurgeMultiplier(totalActiveRides, totalDriversNearBy);

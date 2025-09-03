@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { RideStatus } from "../../modules/ride/ride.interface";
 import { Ride } from "../../modules/ride/ride.model";
+import { IsActive } from "../../modules/user/user.interface";
+import { User } from "../../modules/user/user.model";
 import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";
 import { agenda } from "../agenda";
 
@@ -79,4 +81,16 @@ agenda.define("checkPendingRide", async (job: any) => {
   }
   
 }); 
+
+// when user is blocked for 3 time cancellation in a day, unblock after 24 hours
+agenda.define("unblockUserAfter24Hours", async (job: any) => {
+  const { userId } = job.attrs.data as { userId: string };
+  const user = await User.findById(userId);
+  if (user && user.isActive === IsActive.BLOCKED) {
+    user.isActive = IsActive.ACTIVE;
+    await user.save();
+    console.log(`User ${userId} has been unblocked after 24 hours`);
+    await agenda.cancel({ name: "unblockUserAfter24Hours", "data.userId": userId });
+  }
+});
                 

@@ -32,6 +32,7 @@ const createUser=async(payload:Partial<IUser>)=>{
 
 const getAllUsers=async()=>{
     const users=await User.find().select('-password').lean();
+    
     return users;
 }
 

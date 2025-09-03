@@ -6,7 +6,9 @@ import { Ride } from "../modules/ride/ride.model";
 import httpStatus from "http-status-codes";
 import { DriverStatus } from "../modules/driver/driver.interface";
 import { driverEarningCalculation, finalFareCalculation, PenaltyFareForExceedingTime } from "./fareCalculation";
-import { Role } from "../modules/user/user.interface";
+import { IsActive, Role } from "../modules/user/user.interface";
+import { User } from "../modules/user/user.model";
+import { agenda } from "../agenda/agenda";
 
 
 
@@ -384,7 +386,7 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
             throw new AppError(httpStatus.BAD_REQUEST, "You cannot cancel a ride that is in transit.");
         }
         ride.status = RideStatus.CANCELLED_BY_DRIVER;
-        ride.canceledReason = canceledReason;
+        ride.canceledReason = canceledReason || "UNKNOWN";
         ride.statusHistory.push({
             status: RideStatus.CANCELLED_BY_DRIVER,
             by: driver._id,
@@ -392,9 +394,39 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
         })
         await ride.save();
 
+        //if a driver total cancelled rides exceed 3 then block the driver
+        const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+        const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+
+        const totalCancelledRidesToday = await Ride.countDocuments({
+            driver: driver._id,
+            statusHistory: {
+                $elemMatch: {
+                    status: RideStatus.CANCELLED_BY_DRIVER,
+                    timestamp: { $gte: todayStart, $lt: todayEnd }
+                }
+            }
+        });
+
+
+        if (totalCancelledRidesToday >= 3) {
+
+            //block the rider
+            await User.findByIdAndUpdate(token.userId, { isActive: IsActive.BLOCKED }, { new: true, runValidators: true });
+            //schedule a job to unblock the rider after 24 hours
+            await agenda.schedule("24 hours", "unblockUserAfter24Hours", { userId: token.userId.toString() });
+
+        }
+
+
         if (driver.activeRide && String(driver.activeRide) === String(ride._id)) {
             driver.activeRide = null;
-            driver.status = DriverStatus.AVAILABLE;
+            if(totalCancelledRidesToday<3){
+                driver.status = DriverStatus.AVAILABLE;
+            }
+            else{
+                driver.status = DriverStatus.OFFLINE;
+            }
             await driver.save();
         }
 
@@ -418,13 +450,37 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
             throw new AppError(httpStatus.BAD_REQUEST, "You cannot cancel a ride that is in transit.");
         }
         ride.status = RideStatus.CANCELLED_BY_RIDER;
-        ride.canceledReason = canceledReason;
+        ride.canceledReason = canceledReason || "UNKNOWN";
         ride.statusHistory.push({
             status: RideStatus.CANCELLED_BY_RIDER,
             by: ride.user,
             timestamp: new Date()
         })
         await ride.save();
+
+        //if a rider total cancelled rides exceed 3 then block the rider
+        const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+        const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+
+        const totalCancelledRidesToday = await Ride.countDocuments({
+            user: token.userId,
+            statusHistory: {
+                $elemMatch: {
+                    status: RideStatus.CANCELLED_BY_RIDER,
+                    timestamp: { $gte: todayStart, $lt: todayEnd }
+                }
+            }
+        });
+
+
+        if (totalCancelledRidesToday >= 3) {
+            //block the rider
+            await User.findByIdAndUpdate(token.userId, { isActive: IsActive.BLOCKED }, { new: true, runValidators: true });
+            //schedule a job to unblock the rider after 24 hours
+            await agenda.schedule("24 hours", "unblockUserAfter24Hours", { userId: token.userId.toString() });
+
+        }
+
         if (ride.driver && driver && driver.activeRide && String(driver.activeRide) === String(ride._id)) {
             driver.activeRide = null;
             driver.status = DriverStatus.AVAILABLE;

@@ -19,6 +19,25 @@ const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
     const rides = await Ride.find({ user: token.userId, status: { $in: [RideStatus.ACCEPTED, RideStatus.IN_TRANSIT, RideStatus.GOING_TO_PICK_UP, RideStatus.DRIVER_ARRIVED, RideStatus.REQUESTED, RideStatus.PENDING] } });
     const user = await User.findById(token.userId);
 
+    const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+    const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+
+    const totalCancelledRidesToday = await Ride.countDocuments({
+        user: token.userId,
+        statusHistory: {
+            $elemMatch: {
+                status: RideStatus.CANCELLED_BY_RIDER,
+                timestamp: { $gte: todayStart, $lt: todayEnd }
+            }
+        }
+    });
+
+
+    const maxCancellationsPerDay = 3;
+
+    if (totalCancelledRidesToday >= maxCancellationsPerDay) {
+        throw new AppError(httpStatus.BAD_REQUEST, `You have reached the maximum limit of ${maxCancellationsPerDay} cancelled rides for today. You cannot request a new ride until tomorrow.`);
+    }
 
     if (rides.length > 0) {
         throw new AppError(httpStatus.BAD_REQUEST, "You have an ongoing ride. Please complete or cancel the current ride before requesting a new one.");
@@ -37,7 +56,7 @@ const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
     let approxFare = 0;
 
     if (rideData.pickupLocation && rideData.dropOffLocation) {
-        approxFare =await calculateApproxFareWithSurge(rideData.pickupLocation, rideData.dropOffLocation);
+        approxFare = await calculateApproxFareWithSurge(rideData.pickupLocation, rideData.dropOffLocation);
     }
     rideData.approxFare = approxFare;
 
@@ -126,29 +145,29 @@ const getRideHistory = async (userId: string, token: JwtPayload) => {
     if (userId !== token.userId && token.role !== Role.ADMIN) {
         throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to view this ride history");
     }
-    let rides = [] as IRide[] ;
+    let rides = [] as IRide[];
 
     if (token.role === Role.RIDER) {
         rides = await Ride.find({ user: userId }).populate('driver').populate('user');
     }
     else if (token.role === Role.DRIVER) {
         const driver = await Driver.findOne({ user: userId });
-        
+
         if (!driver) {
             throw new AppError(httpStatus.BAD_REQUEST, "You are not registered as a driver");
         }
         rides = await Ride.find({ driver: driver._id }).populate('driver').populate('user');
     }
     else if (token.role === Role.ADMIN) {
-        const user=await User.findById(userId);
-        if(!user){
+        const user = await User.findById(userId);
+        if (!user) {
             throw new AppError(httpStatus.NOT_FOUND, "User not found");
         }
         if (user.role === Role.RIDER) {
             rides = await Ride.find({ user: userId }).populate('driver').populate('user');
         }
         else if (user.role === Role.DRIVER) {
-             const driver = await Driver.findOne({ user: userId });
+            const driver = await Driver.findOne({ user: userId });
             if (!driver) {
                 throw new AppError(httpStatus.BAD_REQUEST, "This user is not registered as a driver");
             }
@@ -202,7 +221,7 @@ const rejectRide = async (rideId: string, token: JwtPayload) => {
         throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to reject this ride");
     }
 
-    if(ride.user.toString()===token.userId){
+    if (ride.user.toString() === token.userId) {
         throw new AppError(httpStatus.BAD_REQUEST, "You cannot reject your own ride request");
     }
 
@@ -252,7 +271,7 @@ const acceptRide = async (rideId: string, token: JwtPayload) => {
         throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to accept this ride");
     }
 
-    if(ride.user.toString()===token.userId){
+    if (ride.user.toString() === token.userId) {
         throw new AppError(httpStatus.BAD_REQUEST, "You cannot accept your own ride request");
     }
 
@@ -260,8 +279,20 @@ const acceptRide = async (rideId: string, token: JwtPayload) => {
         throw new AppError(httpStatus.BAD_REQUEST, "You can only accept a ride that is in requested status");
     }
 
-    const activeVehicle = await Vehicle.findOne({ user: token.userId, isActive: true });
+    if (!driver) {
+        throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
+    }
 
+    if (driver.status !== DriverStatus.AVAILABLE) {
+        throw new AppError(httpStatus.BAD_REQUEST, "You are not available to accept rides. Please set your status to AVAILABLE.");
+    }
+
+    if (driver.activeRide) {
+        throw new AppError(httpStatus.BAD_REQUEST, "You already have an active ride. Please complete or cancel the current ride before accepting a new one.");
+    }
+
+
+    const activeVehicle = await Vehicle.findOne({ user: token.userId, isActive: true });
 
     ride.status = RideStatus.ACCEPTED;
     ride.statusHistory.push({
