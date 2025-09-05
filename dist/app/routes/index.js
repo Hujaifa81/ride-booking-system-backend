@@ -12,7 +12,7 @@ const report_route_1 = require("../modules/report/report.route");
 exports.router = (0, express_1.Router)();
 const moduleRoutes = [
     {
-        path: "/users",
+        path: "/user",
         route: user_route_1.userRoutes
     },
     {
@@ -20,15 +20,15 @@ const moduleRoutes = [
         route: auth_route_1.authRoutes
     },
     {
-        path: '/drivers',
+        path: '/driver',
         route: driver_route_1.driverRoutes
     },
     {
-        path: '/vehicles',
+        path: '/vehicle',
         route: vehicle_route_1.vehicleRoutes
     },
     {
-        path: '/rides',
+        path: '/ride',
         route: ride_route_1.rideRoutes
     },
     {
@@ -36,7 +36,7 @@ const moduleRoutes = [
         route: analytics_route_1.analyticsRoutes
     },
     {
-        path: '/reports',
+        path: '/report',
         route: report_route_1.reportRoutes
     }
 ];

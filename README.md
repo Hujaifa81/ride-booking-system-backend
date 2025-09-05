@@ -85,57 +85,57 @@ This backend implements role-based access control (RBAC) with the following role
 ## API Endpoints
 
 ### Auth
-- `GET /api/auth/google`
-- `GET /api/auth/google/callback`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `POST /api/auth/reset-password`
-- `POST /api/auth/refresh-token`
+- `GET /api/v1/auth/google`
+- `GET /api/v1/auth/google/callback`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/reset-password`
+- `POST /api/v1/auth/refresh-token`
 
 ### User
-- `POST /api/user/register`
-- `GET /api/user/all`
-- `PATCH /api/user/:userId`
+- `POST /api/v1/user/register`
+- `GET /api/v1/user/all`
+- `PATCH /api/v1/user/:userId`
 
 ### Driver
-- `POST /api/driver/create`
-- `GET /api/driver/all`
-- `PATCH /api/driver/approve-status/:driverId`
-- `PATCH /api/driver/availability-status`
-- `PATCH /api/driver/location`
-- `GET /api/driver/earnings-history/:driverId`
-- `PATCH /api/driver/is-suspended/:driverId`
-- `PATCH /api/driver/rating/:driverId`
+- `POST /api/v1/driver/create`
+- `GET /api/v1/driver/all`
+- `PATCH /api/v1/driver/approve-status/:driverId`
+- `PATCH /api/v1/driver/availability-status`
+- `PATCH /api/v1/driver/location`
+- `GET /api/v1/driver/earnings-history/:driverId`
+- `PATCH /api/v1/driver/is-suspended/:driverId`
+- `PATCH /api/v1/driver/rating/:driverId`
 
 ### Vehicle
-- `POST /api/vehicle/create`
-- `PATCH /api/vehicle/active/:vehicleId`
+- `POST /api/v1/vehicle/create`
+- `PATCH /api/v1/vehicle/active/:vehicleId`
 
 ### Ride
-- `POST /api/ride/create`
-- `PATCH /api/ride/status-change/:rideId`
-- `PATCH /api/ride/cancel/:rideId`
-- `GET /api/ride/all`
-- `GET /api/ride/single-ride/:rideId`
-- `GET /api/ride/history/:userId`
-- `PATCH /api/ride/reject/:rideId`
-- `PATCH /api/ride/accept/:rideId`
-- `POST /api/ride/feedback/:rideId`
+- `POST /api/v1/ride/create`
+- `PATCH /api/v1/ride/status-change/:rideId`
+- `PATCH /api/v1/ride/cancel/:rideId`
+- `GET /api/v1/ride/all`
+- `GET /api/v1/ride/single-ride/:rideId`
+- `GET /api/v1/ride/history/:userId`
+- `PATCH /api/v1/ride/reject/:rideId`
+- `PATCH /api/v1/ride/accept/:rideId`
+- `POST /api/v1/ride/feedback/:rideId`
 
 ### Report
-- `GET /api/report/kpi`
-- `GET /api/report/top-drivers`
-- `GET /api/report/top-riders`
-- `GET /api/report/full-analytics`
+- `GET /api/v1/report/kpi`
+- `GET /api/v1/report/top-drivers`
+- `GET /api/v1/report/top-riders`
+- `GET /api/v1/report/full-analytics`
 
 ### Analytics
-- `GET /api/analytics/dashboard-summary`
-- `GET /api/analytics/ride-trends`
-- `GET /api/analytics/revenue-trends`
-- `GET /api/analytics/top-drivers`
-- `GET /api/analytics/top-riders`
-- `GET /api/analytics/cancellation-breakdown`
-- `GET /api/analytics/funnel`
+- `GET /api/v1/analytics/dashboard-summary`
+- `GET /api/v1/analytics/ride-trends`
+- `GET /api/v1/analytics/revenue-trends`
+- `GET /api/v1/analytics/top-drivers`
+- `GET /api/v1/analytics/top-riders`
+- `GET /api/v1/analytics/cancellation-breakdown`
+- `GET /api/v1/analytics/funnel`
 
 ---
 

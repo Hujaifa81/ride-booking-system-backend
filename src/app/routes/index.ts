@@ -13,7 +13,7 @@ export const router = Router();
 
 const moduleRoutes=[
     {
-        path:"/users",
+        path:"/user",
         route:userRoutes
     },
     {
@@ -21,15 +21,15 @@ const moduleRoutes=[
         route:authRoutes
     },
     {
-        path: '/drivers',
+        path: '/driver',
         route:driverRoutes
     },
     {
-        path: '/vehicles',
+        path: '/vehicle',
         route:vehicleRoutes
     },
     {
-        path: '/rides',
+        path: '/ride',
         route:rideRoutes
     },
     {
@@ -37,7 +37,7 @@ const moduleRoutes=[
         route:analyticsRoutes
     },
     {
-        path: '/reports',
+        path: '/report',
         route:reportRoutes
     }
 ]
