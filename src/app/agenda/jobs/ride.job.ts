@@ -3,6 +3,7 @@ import { RideStatus } from "../../modules/ride/ride.interface";
 import { Ride } from "../../modules/ride/ride.model";
 import { IsActive } from "../../modules/user/user.interface";
 import { User } from "../../modules/user/user.model";
+import { Vehicle } from "../../modules/vehicle/vehicle.model";
 import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";
 import { agenda } from "../agenda";
 
@@ -18,6 +19,7 @@ agenda.define("driverResponseTimeout", async (job: any) => {
 
   ride.rejectedDrivers.push(ride.driver);
   ride.driver = null;
+  ride.vehicle = null;
   await ride.save();
 
   const newDriver = await findNearestAvailableDriver(rideId);
@@ -31,13 +33,14 @@ agenda.define("driverResponseTimeout", async (job: any) => {
     await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString(), "data.driverId": driverId });
 
     // schedule new timeout job for new driver
-    await agenda.schedule("1 minute", "driverResponseTimeout", {
+    await agenda.schedule("5 minutes", "driverResponseTimeout", {
       rideId: ride._id.toString(),
       driverId: newDriver._id.toString(),
     });
   } else {
     ride.status = RideStatus.PENDING;
     ride.driver = null;
+    ride.vehicle = null;
     await ride.save();
 
     try {
@@ -56,6 +59,9 @@ agenda.define("checkPendingRide", async (job: any) => {
   // Cancel ride if pending > 10 minute from creation
   if (now - createdAt >= 10 * 60 * 1000) {
     ride.status = RideStatus.CANCELLED_FOR_PENDING_TIME_OVER;
+    ride.driver = null;
+    ride.vehicle = null;
+    ride.canceledReason = 'No drivers available';
     ride.statusHistory.push({
       status: RideStatus.CANCELLED_FOR_PENDING_TIME_OVER,
       timestamp: new Date(),
@@ -72,11 +78,13 @@ agenda.define("checkPendingRide", async (job: any) => {
   if (driver) {
     
     ride.driver = driver._id;
+    const activeVehicle = await Vehicle.findOne({ user: driver.user, isActive: true });
+    ride.vehicle = activeVehicle?._id;
     ride.status = RideStatus.REQUESTED;
     await ride.save();
     await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString() });
     // Schedule new timeout job for the newly assigned driver 
-    await agenda.schedule("1 minute", "driverResponseTimeout", { rideId: ride._id.toString(), driverId: driver._id.toString() });
+    await agenda.schedule("5 minutes", "driverResponseTimeout", { rideId: ride._id.toString(), driverId: driver._id.toString() });
     await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id.toString() });
   }
   

@@ -9,17 +9,15 @@ export const createDriverZodSchema = z.object({
 })
 
 export const locationZodSchema = z.object({
-  type: z.literal("Point").default("Point").optional(),
+  type: z.literal("Point").default("Point"),
   coordinates: z
-    .tuple([z.number(), z.number()]) // [longitude, latitude]
-    .refine(
-      (coords) =>
-        coords[0] >= -180 &&
-        coords[0] <= 180 &&
-        coords[1] >= -90 &&
-        coords[1] <= 90,
-      { message: "Invalid longitude/latitude values" }
-    ),
+  .array(z.coerce.number())
+  .length(2)
+  .refine(
+    ([lng, lat]) =>
+      lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90,
+    { message: "Coordinates must be [longitude, latitude]" }
+  )
 });
 
 export const updateDriverZodSchema = z.object({
@@ -43,6 +41,8 @@ export const driverRatingZodSchema = z.object({
     rideId: z.string().regex(/^[0-9a-fA-F]{24}$/, { message: "Invalid Ride ID format." })
 })
 
-export const updateLocationZodSchema = locationZodSchema;
+export const updateLocationZodSchema = z.object({
+    location: locationZodSchema
+});
 
 

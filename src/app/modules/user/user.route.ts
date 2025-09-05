@@ -9,8 +9,6 @@ const router=Router();
 
 router.post('/register',validateRequest(createUserZodSchema),userController.register)
 router.get('/all',checkAuth(Role.ADMIN),userController.getAllUsers)
-//block or activate user
-router.patch('/is-active/:userId',validateRequest(updateUserZodSchema),checkAuth(Role.ADMIN),userController.isActiveChange)
-router.patch('/role/:userId',validateRequest(updateUserZodSchema),checkAuth(Role.ADMIN),userController.updateUserRole)
+router.patch('/:userId',checkAuth(...Object.values(Role)),validateRequest(updateUserZodSchema),userController.updateUser)
 
 export const userRoutes = router;

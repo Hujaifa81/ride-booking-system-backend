@@ -14,7 +14,7 @@ const createDriver = catchAsync(async (req: Request, res: Response, next: NextFu
 
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
-        message: "Driver created successfully",
+        message: "Driver created successfully.Waiting for admin approval.",
         success: true,
         data: driver
     })
@@ -49,6 +49,7 @@ const driverApprovedStatusChange = catchAsync(async (req: Request, res: Response
 
 const driverStatusChange = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { status } = req.body;
+   
 
     const driver=await DriverService.driverStatusChange(status,req.user as JwtPayload);
 
@@ -61,7 +62,8 @@ const driverStatusChange = catchAsync(async (req: Request, res: Response, next: 
 })
 
 const driverLocationUpdate = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const location = req.body;
+    const {location} = req.body;
+   
 
     const driver = await DriverService.driverLocationUpdate(location,req.user as JwtPayload);
 

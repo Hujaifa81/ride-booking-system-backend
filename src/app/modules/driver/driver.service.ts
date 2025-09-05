@@ -21,9 +21,13 @@ const createDriver = async (payload: Partial<IDriver>, token: JwtPayload) => {
     throw new AppError(httpStatus.BAD_REQUEST, "Driver already exists with this user");
   }
 
-  const isUserVerified = await User.findById(token.userId);
+  const user = await User.findById(token.userId);
 
-  if (!isUserVerified || !isUserVerified.isVerified) {
+  if(!user?.phone){
+    throw new AppError(httpStatus.BAD_REQUEST, "Please add phone number to your profile first.");
+  }
+
+  if (!user || !user.isVerified) {
     throw new AppError(httpStatus.BAD_REQUEST, "You are not verified yet. Please verify your account first.");
   }
 
@@ -135,6 +139,7 @@ const driverStatusChange = async (updateStatus: string, token: JwtPayload) => {
 
 
   driver.status = updateStatus as DriverStatus;
+ 
   await driver.save();
 
   if (driver.status === DriverStatus.OFFLINE) {

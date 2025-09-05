@@ -4,6 +4,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { UserService } from "./user.service";
 import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status-codes";
+import { JwtPayload } from "jsonwebtoken";
 
 const register=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
     const user=await UserService.createUser(req.body);
@@ -23,32 +24,22 @@ const getAllUsers=catchAsync(async(req:Request, res:Response, next:NextFunction)
         data:users
     }) 
 })
-const isActiveChange=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
+
+const updateUser=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
     const userId=req.params.userId;
-    const {isActive}=req.body;
-    const user=await UserService.isActiveChange(userId,isActive);
+    const user=await UserService.updateUser(userId,req.body,req.user as JwtPayload);
     sendResponse(res,{
         statusCode:httpStatus.OK,
-        message:`User is now ${isActive}`,
+        message:"User updated successfully",
         success:true,
         data:user
-    })
+    }) 
 })
-const updateUserRole=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
-    const userId=req.params.userId;
-    const {role}=req.body;
-    const user=await UserService.updateUserRole(userId,role);
-    sendResponse(res,{
-        statusCode:httpStatus.OK,
-        message:`User role updated to ${role} successfully`,
-        success:true,
-        data:user
-    })
-})
+
 export const userController = {
     register,
     getAllUsers,
-    isActiveChange,
-    updateUserRole
+    updateUser,
+    
 
 }

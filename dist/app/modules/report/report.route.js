@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.reportRoutes = void 0;
+const express_1 = require("express");
+const report_controller_1 = require("./report.controller");
+const checkAuth_1 = require("../../middlewares/checkAuth");
+const user_interface_1 = require("../user/user.interface");
+const router = (0, express_1.Router)();
+router.get("/kpi", (0, checkAuth_1.checkAuth)(user_interface_1.Role.ADMIN), report_controller_1.ReportController.downloadKpiReport);
+router.get("/top-drivers", (0, checkAuth_1.checkAuth)(user_interface_1.Role.ADMIN), report_controller_1.ReportController.downloadTopDriversReport);
+router.get("/top-riders", (0, checkAuth_1.checkAuth)(user_interface_1.Role.ADMIN), report_controller_1.ReportController.downloadTopRidersReport);
+router.get("/full-analytics", (0, checkAuth_1.checkAuth)(user_interface_1.Role.ADMIN), report_controller_1.ReportController.downloadFullAnalytics);
+exports.reportRoutes = router;

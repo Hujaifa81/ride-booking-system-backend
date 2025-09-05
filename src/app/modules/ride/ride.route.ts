@@ -16,6 +16,6 @@ router.get("/single-ride/:rideId", checkAuth(...Object.values(Role)), RideContro
 router.get("/history/:userId", checkAuth(...Object.values(Role)), RideController.getRideHistory);
 router.patch("/reject/:rideId",checkAuth(Role.DRIVER),RideController.rejectRide);
 router.patch("/accept/:rideId",checkAuth(Role.DRIVER),RideController.acceptRide);
-router.post("/feedback",validateRequest(createFeedbackZodSchema),checkAuth(Role.RIDER),RideController.createFeedback);
+router.post("/feedback/:rideId",validateRequest(createFeedbackZodSchema),checkAuth(Role.RIDER),RideController.createFeedback);
 
 export const rideRoutes = router;

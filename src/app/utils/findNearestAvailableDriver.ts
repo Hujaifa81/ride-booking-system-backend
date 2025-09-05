@@ -30,6 +30,7 @@ export const findNearestAvailableDriver = async (rideId: string) => {
 
   // Filter out drivers where user didn’t match
   const validDrivers = drivers.filter((d) => d.user !== null);
+  console.log(validDrivers);
 
   // Return nearest valid driver (first one, since $near already sorts by distance)
   return validDrivers.length > 0 ? validDrivers[0] : null;

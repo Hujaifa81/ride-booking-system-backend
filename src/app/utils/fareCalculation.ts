@@ -70,10 +70,9 @@ export const calculateApproxFareWithSurge = async (pickupLocation: ILocation, dr
     const totalActiveRides = await Ride.countDocuments({
         status: { $in: [RideStatus.PENDING, RideStatus.REQUESTED] },
         pickupLocation: {
-            $near: {
-                $geometry: { type: "Point", coordinates: pickupLocation.coordinates },
-                $maxDistance: 3000,
-            },
+            $geoWithin: {
+                $centerSphere: [pickupLocation.coordinates, 5000 / 6378137] // 5000 meters radius, Earth's radius in meters
+            }
         },
     });
 

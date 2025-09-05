@@ -14,7 +14,7 @@ export const updateRideZodSchema = z.object({
     canceledReason: z.string({ error: "Canceled reason must be a string" }).max(200, { message: "Canceled reason cannot exceed 200 characters." }).optional(),
     pickupLocation: locationZodSchema.optional(),
     dropOffLocation: locationZodSchema.optional(),
-    statsHistory: z.array(z.object({
+    statusHistory: z.array(z.object({
         status: z.enum(Object.values(RideStatus)),
         timestamp: z.date({ error: "Timestamp must be a valid date" }),
         by: z.string().regex(/^[0-9a-fA-F]{24}$/, { message: "Invalid ObjectId format." })
