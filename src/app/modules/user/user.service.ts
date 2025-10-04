@@ -85,8 +85,17 @@ const updateUser = async (userId: string, payload: Partial<IUser>, decodedToken:
 
 }
 
+const getMyProfile = async (decodedToken: JwtPayload) => {
+    const user = await User.findById(decodedToken.userId).select('-password').lean();
+    if (!user) {
+        throw new AppError(httpStatus.NOT_FOUND, "User Not Found")
+    }
+    return user;
+}
+
 export const UserService = {
     createUser,
     getAllUsers,
     updateUser,
+    getMyProfile
 }

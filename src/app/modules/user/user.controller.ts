@@ -36,10 +36,19 @@ const updateUser=catchAsync(async(req:Request, res:Response, next:NextFunction) 
     }) 
 })
 
+const getMyProfile=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
+    const user=await UserService.getMyProfile(req.user as JwtPayload);
+    sendResponse(res,{
+        statusCode:httpStatus.OK,
+        message:"User profile fetched successfully",
+        success:true,
+        data:user
+    }) 
+})
 export const userController = {
     register,
     getAllUsers,
     updateUser,
-    
+    getMyProfile
 
 }

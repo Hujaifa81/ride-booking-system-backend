@@ -6,6 +6,7 @@ import { vehicleRoutes } from "../modules/vehicle/vehicle.route";
 import { rideRoutes } from "../modules/ride/ride.route";
 import { analyticsRoutes } from "../modules/analytics/analytics.route";
 import { reportRoutes } from "../modules/report/report.route";
+import { mapsRoutes } from "../modules/maps/maps.route";
 
 
 
@@ -39,6 +40,10 @@ const moduleRoutes=[
     {
         path: '/report',
         route:reportRoutes
+    },
+    {
+        path: '/maps',
+        route:mapsRoutes
     }
 ]
 moduleRoutes.forEach((route)=>router.use(route.path, route.route));

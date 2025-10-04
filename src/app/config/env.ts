@@ -14,11 +14,12 @@ interface EnvConfig{
     JWT_ACCESS_SECRET:string,
     JWT_REFRESH_SECRET:string,
     JWT_ACCESS_EXPIRES_IN:string,
-    JWT_REFRESH_EXPIRES_IN:string
+    JWT_REFRESH_EXPIRES_IN:string,
+    Google_Maps_API_KEY:string
 }
 
 const loadEnv=():EnvConfig=>{
-    const requiredEnvVars:string[] = ['PORT', 'DB_URL', 'NODE_ENV', 'SALT_ROUND',"EXPRESS_SESSION_SECRET", 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET','FRONTEND_URL','GOOGLE_CALLBACK_URL','JWT_ACCESS_SECRET','JWT_REFRESH_SECRET','JWT_ACCESS_EXPIRES_IN','JWT_REFRESH_EXPIRES_IN'];
+    const requiredEnvVars:string[] = ['PORT', 'DB_URL', 'NODE_ENV', 'SALT_ROUND',"EXPRESS_SESSION_SECRET", 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET','FRONTEND_URL','GOOGLE_CALLBACK_URL','JWT_ACCESS_SECRET','JWT_REFRESH_SECRET','JWT_ACCESS_EXPIRES_IN','JWT_REFRESH_EXPIRES_IN','GOOGLE_MAPS_API_KEY'];
 
     requiredEnvVars.forEach((key)=>{
         if(!process.env[key]){
@@ -38,7 +39,8 @@ const loadEnv=():EnvConfig=>{
         JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET as string,
         JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET as string,
         JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN as string,
-        JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN as string
+        JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN as string,
+        Google_Maps_API_KEY: process.env.GOOGLE_MAPS_API_KEY as string
     }
 }
 export const envVars= loadEnv();
