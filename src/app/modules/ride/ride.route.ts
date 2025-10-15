@@ -17,5 +17,6 @@ router.get("/history/:userId", checkAuth(...Object.values(Role)), RideController
 router.patch("/reject/:rideId",checkAuth(Role.DRIVER),RideController.rejectRide);
 router.patch("/accept/:rideId",checkAuth(Role.DRIVER),RideController.acceptRide);
 router.post("/feedback/:rideId",validateRequest(createFeedbackZodSchema),checkAuth(Role.RIDER),RideController.createFeedback);
+router.get("/active-ride",checkAuth(Role.RIDER),RideController.getActiveRideForRider);
 
 export const rideRoutes = router;

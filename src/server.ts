@@ -1,10 +1,11 @@
-import { Server } from 'http';
+import { Server,createServer } from 'http';
 import { envVars } from './app/config/env';
 import mongoose from 'mongoose';
 import app from './app';
 import { seedAdmin } from './app/utils/seedAdmin';
 import { agenda } from './app/agenda/agenda';
 import './app/agenda/jobs/ride.job';
+import { initializeSocket } from './app/config/socket';
 
 
 
@@ -15,8 +16,10 @@ const startServer = async () => {
         await mongoose.connect(envVars.DB_URL)
 
         console.log("Connected to DB!!");
+        const httpServer = createServer(app);
+        initializeSocket(httpServer);
 
-        server = app.listen(envVars.PORT, () => {
+        server = httpServer.listen(envVars.PORT, () => {
             console.log(`Server is listening to port ${envVars.PORT}`);
         });
     } catch (error) {

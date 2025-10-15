@@ -343,6 +343,49 @@ const createFeedback = async (rideId: string, feedback: string, token: JwtPayloa
     return ride;
 }
 
+const getActiveRideForRider = async (userId: string) => {
+    const ride = await Ride.findOne({
+        user: userId, 
+        status: { 
+            $in: [
+                RideStatus.REQUESTED, 
+                RideStatus.ACCEPTED, 
+                RideStatus.DRIVER_ARRIVED, 
+                RideStatus.GOING_TO_PICK_UP, 
+                RideStatus.IN_TRANSIT,
+                RideStatus.REACHED_DESTINATION, 
+                RideStatus.PENDING
+            ] 
+        }
+    }).populate('driver').populate('user');
+    
+    if (!ride) {
+        throw new AppError(httpStatus.NOT_FOUND, "No active ride found");
+    }
+    
+    // ✅ Handle vehicle data safely
+    let vehicleData = null;
+    
+    try {
+        if (ride.vehicle) {
+            const vehicle = await Vehicle.findById(ride.vehicle);
+            if (vehicle) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { user, _id, ...vehicleInfo } = vehicle.toObject();
+                vehicleData = vehicleInfo;
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching vehicle data:', error);
+        // Continue without vehicle data rather than failing
+    }
+    
+    return {
+        ...ride.toObject(),
+        vehicle: vehicleData // Will be null if no vehicle or vehicle not found
+    };
+}
+
 export const RideService = {
     createRide,
     rideStatusChangeAfterRideAccepted,
@@ -352,5 +395,6 @@ export const RideService = {
     getAllRides,
     rejectRide,
     acceptRide,
-    createFeedback
+    createFeedback,
+    getActiveRideForRider
 };
