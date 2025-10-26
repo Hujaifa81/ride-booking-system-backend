@@ -15,6 +15,7 @@ router.patch("/location",validateRequest(updateLocationZodSchema),checkAuth(Role
 router.get("/earnings-history/:driverId",checkAuth(Role.DRIVER,Role.ADMIN), driverController.getDriverEarningsHistory);
 router.patch("/is-suspended/:driverId",checkAuth(Role.ADMIN), driverController.driverSuspendedStatusChange);
 router.patch("/rating/:driverId",validateRequest(driverRatingZodSchema),checkAuth(Role.RIDER), driverController.updateDriverRating);
+router.get("/my-driver-profile",checkAuth(Role.DRIVER,Role.RIDER), driverController.getMyDriverProfile);
 
 
 

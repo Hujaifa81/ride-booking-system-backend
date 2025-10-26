@@ -247,7 +247,18 @@ const updateDriverRating = async (driverId: string, rating: number, rideId: stri
   return { driver, ride };
 }
 
-
+const getMyDriverProfile = async (token: JwtPayload) => {
+  const driver = await Driver.findOne({ user: token.userId });
+  if (!driver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Driver profile not found");
+  }
+  const vehicle=await Vehicle.find({user:token.userId});
+  const profile={
+    ...driver.toObject(),
+    vehicles:vehicle
+  }
+  return profile;
+}
 
 export const DriverService = {
   createDriver,
@@ -257,5 +268,6 @@ export const DriverService = {
   driverLocationUpdate,
   getDriverEarningsHistory,
   driverSuspendedStatusChange,
-  updateDriverRating
+  updateDriverRating,
+  getMyDriverProfile
 };

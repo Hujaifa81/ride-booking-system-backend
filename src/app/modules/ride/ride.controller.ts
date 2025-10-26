@@ -7,10 +7,11 @@ import httpStatus from 'http-status-codes';
 import { RideService } from "./ride.service";
 import { RideStatus } from "./ride.interface";
 import { emitRideUpdate, emitStatusChange } from "../../utils/socket";
+import { ILocation } from "../driver/driver.interface";
 
 const createRide = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const ride = await RideService.createRide(req.body, req.user as JwtPayload);
-    emitRideUpdate(ride._id.toString(), ride);
+    // emitRideUpdate(ride._id.toString(), ride);
     if (ride.status === 'PENDING') {
         sendResponse(res, {
             statusCode: httpStatus.OK,
@@ -51,7 +52,7 @@ const cancelRide = catchAsync(async (req: Request, res: Response, next: NextFunc
     const { canceledReason } = req.body;
     console.log(canceledReason);
     const ride = await RideService.canceledRide(rideId, canceledReason, req.user as JwtPayload);
-    emitStatusChange(rideId, 'CANCELLED', (req.user as JwtPayload).userId);
+    emitStatusChange(rideId, ride?.status ?? '', (req.user as JwtPayload).userId);
     if (ride) {
         emitRideUpdate(rideId, ride);
     }
@@ -76,7 +77,7 @@ const getAllRides = catchAsync(async (req: Request, res: Response, next: NextFun
 
 const getRideHistory = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.params.userId;
-    const rides = await RideService.getRideHistory(userId, req.user as JwtPayload);
+    const rides = await RideService.getRideHistory(userId, req.user as JwtPayload, req.query as Record<string, string>);
     sendResponse(res, {
         statusCode: httpStatus.OK,
         message: `Ride history fetched successfully`,
@@ -123,7 +124,9 @@ const acceptRide = catchAsync(async (req: Request, res: Response, next: NextFunc
     const rideId = req.params.rideId;
     const ride = await RideService.acceptRide(rideId, req.user as JwtPayload);
     emitStatusChange(rideId, RideStatus.ACCEPTED, (req.user as JwtPayload).userId);
-    emitRideUpdate(rideId, ride);
+    if (ride) {
+        emitRideUpdate(rideId, ride);
+    }
     sendResponse(res, {
         statusCode: httpStatus.OK,
         message: `Ride accepted successfully.`,
@@ -156,6 +159,38 @@ const getActiveRideForRider = catchAsync(async (req: Request, res: Response, nex
         data: ride
     });
 })
+
+const getApproximateFare = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { pickupLocation, dropoffLocation } = req.query as { pickupLocation: string; dropoffLocation: string };
+    console.log(pickupLocation);
+    const pickupCoords = {
+        type: "Point",
+        coordinates: pickupLocation.split(',').map(Number) // [longitude, latitude]
+    }
+    const dropCoords = {
+        type: "Point",
+        coordinates: dropoffLocation.split(',').map(Number) // [longitude, latitude]
+    }
+    
+    const fare = await RideService.getApproximateFare(pickupCoords as ILocation, dropCoords as ILocation);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Approximate fare calculated successfully.`,
+        success: true,
+        data: { approximateFare: fare }
+    });
+})
+const getTotalRidesCount = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.params.userId;
+    const totalRides = await RideService.getTotalRidesCount(userId, req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Total rides count fetched successfully.`,
+        success: true,
+        data: totalRides 
+    });
+})
+
 export const RideController = {
     createRide,
     rideStatusChangeAfterRideAccepted,
@@ -166,6 +201,8 @@ export const RideController = {
     rejectRide,
     acceptRide,
     createFeedback,
-    getActiveRideForRider
+    getActiveRideForRider,
+    getApproximateFare,
+    getTotalRidesCount
 
 }

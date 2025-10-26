@@ -82,7 +82,7 @@ const resetPassword = catchAsync(async (req: Request, res: Response, next: NextF
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
-        message: "Password reset successful",
+        message: "Password reset successfully",
         data: data
     })
 })

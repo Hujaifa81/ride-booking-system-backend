@@ -6,7 +6,7 @@ export enum DriverStatus {
     OFFLINE = "OFFLINE"
 }
 export interface ILocation {
-  type: "Point";
+  type?: "Point";
   coordinates: [number, number]; // [longitude, latitude]
 }
 

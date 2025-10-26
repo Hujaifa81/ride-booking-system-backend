@@ -443,6 +443,9 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
         if (ride.status === RideStatus.COMPLETED) {
             throw new AppError(httpStatus.BAD_REQUEST, "You cannot cancel a completed ride.");
         }
+        if(ride.status===RideStatus.ACCEPTED){
+            throw new AppError(httpStatus.BAD_REQUEST, "You cannot cancel a ride that has been accepted by a driver. Please contact support if you wish to cancel this ride.");
+        }
         if (ride.status === RideStatus.REACHED_DESTINATION) {
             throw new AppError(httpStatus.BAD_REQUEST, "You cannot cancel a ride that has reached the destination.");
         }

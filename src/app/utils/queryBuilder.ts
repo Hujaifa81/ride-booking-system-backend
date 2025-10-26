@@ -30,6 +30,33 @@ export class QueryBuilder<T> {
 
     }
 
+    dateBetweenSearch(dateField: string): this {
+        const { startDate, endDate } = this.query;
+        if (startDate && endDate) {
+            this.modelQuery = this.modelQuery.find({
+                [dateField]: {
+                    $gte: new Date(startDate),
+                    $lte: new Date(endDate)
+                }
+            });
+        }
+        if (startDate && !endDate) {
+            this.modelQuery = this.modelQuery.find({
+                [dateField]: {
+                    $gte: new Date(startDate)
+                }
+            });
+        }
+        if (!startDate && endDate) {
+            this.modelQuery = this.modelQuery.find({
+                [dateField]: {
+                    $lte: new Date(endDate)
+                }
+            });
+        }
+        return this;
+    }
+
 
     filter(): this {
         const filter = { ...this.query };

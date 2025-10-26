@@ -111,6 +111,17 @@ const updateDriverRating=catchAsync(async(req:Request, res:Response, next:NextFu
         data:result
     })
 })
+
+const getMyDriverProfile = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const driverProfile = await DriverService.getMyDriverProfile(req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Driver profile fetched successfully.",
+        success: true,
+        data: driverProfile
+    });
+});
+
 export const driverController = {
     createDriver,
     getAllDrivers,
@@ -119,5 +130,6 @@ export const driverController = {
     driverLocationUpdate,
     getDriverEarningsHistory,
     driverSuspendedStatusChange,
-    updateDriverRating
+    updateDriverRating,
+    getMyDriverProfile
 }

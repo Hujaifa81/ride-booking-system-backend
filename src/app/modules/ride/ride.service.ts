@@ -9,10 +9,11 @@ import { cancelRide, completedRide, driverArrived, goingToPickup, inTransitRide,
 import { Vehicle } from "../vehicle/vehicle.model";
 import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";
 import { Driver } from "../driver/driver.model";
-import { DriverStatus } from "../driver/driver.interface";
+import { DriverStatus, ILocation } from "../driver/driver.interface";
 import { agenda } from "../../agenda/agenda";
 import { User } from "../user/user.model";
 import { Role } from "../user/user.interface";
+import { QueryBuilder } from "../../utils/queryBuilder";
 
 
 const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
@@ -77,6 +78,7 @@ const createRide = async (rideData: Partial<IRide>, token: JwtPayload) => {
     if (!driver) {
         ride.status = RideStatus.PENDING;
         await ride.save();
+
         // Start repeating job to retry assignment every 30 sec
         await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id.toString() });
         return ride;
@@ -144,14 +146,23 @@ const getAllRides = async () => {
     return ridesWithVehicle;
 }
 
-const getRideHistory = async (userId: string, token: JwtPayload) => {
+const getRideHistory = async (userId: string, token: JwtPayload, query: Record<string, string>) => {
     if (userId !== token.userId && token.role !== Role.ADMIN) {
         throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to view this ride history");
     }
     let rides = [] as IRide[];
+    let metaData = null;
 
     if (token.role === Role.RIDER) {
-        rides = await Ride.find({ user: userId }).populate('driver').populate('user');
+        const queryBuilder = new QueryBuilder(Ride.find({ user: userId }).populate('driver').populate('user'), query)
+        const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
+        const [data, meta] = await Promise.all([
+            ridesWithQueryBuilder.build(),
+            queryBuilder.getMeta()
+        ])
+        rides = data;
+        metaData = meta;
+
     }
     else if (token.role === Role.DRIVER) {
         const driver = await Driver.findOne({ user: userId });
@@ -159,7 +170,14 @@ const getRideHistory = async (userId: string, token: JwtPayload) => {
         if (!driver) {
             throw new AppError(httpStatus.BAD_REQUEST, "You are not registered as a driver");
         }
-        rides = await Ride.find({ driver: driver._id }).populate('driver').populate('user');
+        const queryBuilder = new QueryBuilder(Ride.find({ driver: driver._id }).populate('driver').populate('user'), query)
+        const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
+        const [data, meta] = await Promise.all([
+            ridesWithQueryBuilder.build(),
+            queryBuilder.getMeta()
+        ])
+        rides = data;
+        metaData = meta;
     }
     else if (token.role === Role.ADMIN) {
         const user = await User.findById(userId);
@@ -167,14 +185,29 @@ const getRideHistory = async (userId: string, token: JwtPayload) => {
             throw new AppError(httpStatus.NOT_FOUND, "User not found");
         }
         if (user.role === Role.RIDER) {
-            rides = await Ride.find({ user: userId }).populate('driver').populate('user');
+            const queryBuilder = new QueryBuilder(Ride.find({ user: userId }).populate('driver').populate('user'), query)
+            const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
+            const [data, meta] = await Promise.all([
+                ridesWithQueryBuilder.build(),
+                queryBuilder.getMeta()
+            ])
+            rides = data;
+            metaData = meta;
+
         }
         else if (user.role === Role.DRIVER) {
             const driver = await Driver.findOne({ user: userId });
             if (!driver) {
                 throw new AppError(httpStatus.BAD_REQUEST, "This user is not registered as a driver");
             }
-            rides = await Ride.find({ driver: driver._id }).populate('driver').populate('user');
+            const queryBuilder = new QueryBuilder(Ride.find({ driver: driver._id }).populate('driver').populate('user'), query)
+            const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
+            const [data, meta] = await Promise.all([
+                ridesWithQueryBuilder.build(),
+                queryBuilder.getMeta()
+            ])
+            rides = data;
+            metaData = meta;
         }
     }
 
@@ -189,7 +222,7 @@ const getRideHistory = async (userId: string, token: JwtPayload) => {
 
     }))
 
-    return ridesWithVehicle;
+    return { meta: metaData, data: ridesWithVehicle };
 }
 
 const getSingleRideDetails = async (rideId: string, token: JwtPayload) => {
@@ -245,7 +278,7 @@ const rejectRide = async (rideId: string, token: JwtPayload) => {
     await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString(), "data.driverId": driver._id.toString() });
 
     const newDriver = await findNearestAvailableDriver(ride._id.toString());
-    
+
 
     if (newDriver) {
         ride.driver = newDriver._id;
@@ -322,7 +355,13 @@ const acceptRide = async (rideId: string, token: JwtPayload) => {
     // Cancel any existing timeout job for this ride and driver
     await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString(), "data.driverId": token.userId });
     await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id.toString() });
-    return ride;
+
+    const updatedRide = await Ride.findById(rideId)
+        .populate('user')
+        .populate('driver')
+        .populate('vehicle')
+        .lean();
+    return updatedRide;
 }
 
 const createFeedback = async (rideId: string, feedback: string, token: JwtPayload) => {
@@ -345,27 +384,27 @@ const createFeedback = async (rideId: string, feedback: string, token: JwtPayloa
 
 const getActiveRideForRider = async (userId: string) => {
     const ride = await Ride.findOne({
-        user: userId, 
-        status: { 
+        user: userId,
+        status: {
             $in: [
-                RideStatus.REQUESTED, 
-                RideStatus.ACCEPTED, 
-                RideStatus.DRIVER_ARRIVED, 
-                RideStatus.GOING_TO_PICK_UP, 
+                RideStatus.REQUESTED,
+                RideStatus.ACCEPTED,
+                RideStatus.DRIVER_ARRIVED,
+                RideStatus.GOING_TO_PICK_UP,
                 RideStatus.IN_TRANSIT,
-                RideStatus.REACHED_DESTINATION, 
+                RideStatus.REACHED_DESTINATION,
                 RideStatus.PENDING
-            ] 
+            ]
         }
     }).populate('driver').populate('user');
-    
+
     if (!ride) {
         throw new AppError(httpStatus.NOT_FOUND, "No active ride found");
     }
-    
-    // ✅ Handle vehicle data safely
+
+    //  Handle vehicle data safely
     let vehicleData = null;
-    
+
     try {
         if (ride.vehicle) {
             const vehicle = await Vehicle.findById(ride.vehicle);
@@ -379,11 +418,37 @@ const getActiveRideForRider = async (userId: string) => {
         console.error('Error fetching vehicle data:', error);
         // Continue without vehicle data rather than failing
     }
-    
+
     return {
         ...ride.toObject(),
         vehicle: vehicleData // Will be null if no vehicle or vehicle not found
     };
+}
+
+const getApproximateFare = async (pickupLocation: ILocation, dropOffLocation: ILocation) => {
+    const fare = await calculateApproxFareWithSurge(pickupLocation, dropOffLocation);
+    return fare;
+}
+
+const getTotalRidesCount = async (userId: string, token: JwtPayload) => {
+    if (userId !== token.userId && token.role !== Role.ADMIN) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to view this ride count");
+    }
+    if (token.role === Role.RIDER) {
+        const totalRides = await Ride.countDocuments({ user: userId, status: RideStatus.COMPLETED });
+        const cancelledRides = await Ride.countDocuments({ user: userId, status: { $in: [RideStatus.CANCELLED_BY_RIDER, RideStatus.CANCELLED_BY_DRIVER, RideStatus.CANCELLED_BY_ADMIN, RideStatus.CANCELLED_FOR_PENDING_TIME_OVER] } });
+        return { totalRides, cancelledRides };
+    }
+    else if (token.role === Role.DRIVER) {
+        const driver = await Driver.findOne({ user: userId });
+        if (!driver) {
+            throw new AppError(httpStatus.BAD_REQUEST, "You are not registered as a driver");
+        }
+        const totalRides = await Ride.countDocuments({ driver: driver._id, status: RideStatus.COMPLETED });
+        const cancelledRides = await Ride.countDocuments({ driver: driver._id, status: { $in: [RideStatus.CANCELLED_BY_RIDER, RideStatus.CANCELLED_BY_DRIVER, RideStatus.CANCELLED_BY_ADMIN, RideStatus.CANCELLED_FOR_PENDING_TIME_OVER] } });
+        return { totalRides, cancelledRides };
+    }
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid user role for ride count");
 }
 
 export const RideService = {
@@ -396,5 +461,7 @@ export const RideService = {
     rejectRide,
     acceptRide,
     createFeedback,
-    getActiveRideForRider
+    getActiveRideForRider,
+    getApproximateFare,
+    getTotalRidesCount
 };

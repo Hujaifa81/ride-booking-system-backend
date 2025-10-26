@@ -13,7 +13,7 @@ const resetPassword=async(oldPassword:string, newPassword:string, decodedToken:J
 
     const isMatch=await comparePassword(oldPassword,user.password)
     if(!isMatch){
-        throw new AppError(httpStatus.UNAUTHORIZED, "Old password does not match");
+        throw new AppError(httpStatus.BAD_REQUEST, "Current password does not match");
     }
     const hashedNewPassword=await hashedPassword(newPassword);
 

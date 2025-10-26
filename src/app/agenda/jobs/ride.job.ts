@@ -5,6 +5,7 @@ import { IsActive } from "../../modules/user/user.interface";
 import { User } from "../../modules/user/user.model";
 import { Vehicle } from "../../modules/vehicle/vehicle.model";
 import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";
+import { emitStatusChange } from "../../utils/socket";
 import { agenda } from "../agenda";
 
 
@@ -68,6 +69,7 @@ agenda.define("checkPendingRide", async (job: any) => {
       by: 'SYSTEM'
     });
     await ride.save();
+    emitStatusChange(rideId, RideStatus.CANCELLED_FOR_PENDING_TIME_OVER, ride.user.toString());
     await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id.toString() });
     await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString() });
     console.log(`Ride ${rideId} cancelled after 10 mins`); return;
