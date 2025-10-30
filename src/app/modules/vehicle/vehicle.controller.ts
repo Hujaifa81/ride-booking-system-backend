@@ -16,18 +16,29 @@ const createVehicle=catchAsync(async(req:Request, res:Response, next:NextFunctio
     });
 })
 
-const activeVehicle=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
-    const vehicleId=req.params.vehicleId;
-    
-    const vehicle = await VehicleService.activeVehicle(vehicleId, req.user as JwtPayload);
+const getMyVehicles=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
+    const vehicles = await VehicleService.getMyVehicles(req.user as JwtPayload);
     sendResponse(res, {
         statusCode: httpStatus.OK,
-        message: "Vehicle activated successfully",
+        message: "Vehicles fetched successfully",
+        success: true,
+        data: vehicles
+    });
+})
+
+const activeVehicleStatusChange=catchAsync(async(req:Request, res:Response, next:NextFunction) => {
+    const vehicleId=req.params.vehicleId;
+    const vehicle = await VehicleService.activeVehicleStatusChange(vehicleId, req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Vehicle status changed successfully",
         success: true,
         data: vehicle
     });
 })
+
 export const vehicleController = {
     createVehicle,
-    activeVehicle
+    getMyVehicles,
+    activeVehicleStatusChange
 };

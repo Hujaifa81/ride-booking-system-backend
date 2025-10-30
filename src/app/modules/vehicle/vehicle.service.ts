@@ -36,34 +36,25 @@ const createVehicle=async(payload:Partial<IVehicle>, token: JwtPayload) => {
     return vehicle;
 }
 
-const activeVehicle=async(vehicleId:string, token: JwtPayload)=>{
-    const vehicle=await Vehicle.findOne({_id:vehicleId,user:token.userId});
-    
+const getMyVehicles=async(token: JwtPayload)=>{
+    const vehicles=await Vehicle.find({user:token.userId, isDeleted:false});
+    return vehicles;
+}
+
+const activeVehicleStatusChange=async(vehicleId:string, token: JwtPayload)=>{
+    const vehicle=await Vehicle.findOne({_id:vehicleId, user:token.userId});
 
     if(!vehicle){
         throw new AppError(httpStatus.NOT_FOUND, "Vehicle not found");
     }
-    if(vehicle.isDeleted){
-        throw new AppError(httpStatus.BAD_REQUEST, "Vehicle is deleted");
-    }
-    if(vehicle.isActive){
-        throw new AppError(httpStatus.BAD_REQUEST, "Vehicle is already active");
-    }
-    
-    vehicle.isActive=true;
+    vehicle.isActive = !vehicle.isActive;
     await vehicle.save();
-
-    const otherVehicles=await Vehicle.find({user:token.userId, _id:{$ne:vehicleId}});
-
-    for(const otherVehicle of otherVehicles){
-        otherVehicle.isActive=false;
-        await otherVehicle.save();
-    }
 
     return vehicle;
 }
 
 export const VehicleService = {
     createVehicle,
-    activeVehicle
+    getMyVehicles,
+    activeVehicleStatusChange
 };

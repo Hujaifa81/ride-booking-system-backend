@@ -8,6 +8,7 @@ import { createVehicleZodSchema } from "./vehicle.validation";
 const router=Router();
 
 router.post("/create",validateRequest(createVehicleZodSchema),checkAuth(Role.RIDER,Role.DRIVER),vehicleController.createVehicle);
-router.patch("/active/:vehicleId",checkAuth(Role.DRIVER),vehicleController.activeVehicle);
+router.get("/my-vehicles",checkAuth(Role.DRIVER),vehicleController.getMyVehicles);
+router.patch("/active-status-change/:vehicleId",checkAuth(Role.DRIVER),vehicleController.activeVehicleStatusChange);
 
 export const vehicleRoutes = router;

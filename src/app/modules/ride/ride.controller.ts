@@ -8,6 +8,7 @@ import { RideService } from "./ride.service";
 import { RideStatus } from "./ride.interface";
 import { emitRideUpdate, emitStatusChange } from "../../utils/socket";
 import { ILocation } from "../driver/driver.interface";
+import * as fs from 'fs';
 
 const createRide = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const ride = await RideService.createRide(req.body, req.user as JwtPayload);
@@ -78,6 +79,7 @@ const getAllRides = catchAsync(async (req: Request, res: Response, next: NextFun
 const getRideHistory = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.params.userId;
     const rides = await RideService.getRideHistory(userId, req.user as JwtPayload, req.query as Record<string, string>);
+    
     sendResponse(res, {
         statusCode: httpStatus.OK,
         message: `Ride history fetched successfully`,
@@ -191,6 +193,7 @@ const getTotalRidesCount = catchAsync(async (req: Request, res: Response, next: 
     });
 })
 
+
 export const RideController = {
     createRide,
     rideStatusChangeAfterRideAccepted,
@@ -203,6 +206,6 @@ export const RideController = {
     createFeedback,
     getActiveRideForRider,
     getApproximateFare,
-    getTotalRidesCount
+    getTotalRidesCount,
 
 }

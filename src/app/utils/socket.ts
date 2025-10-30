@@ -66,3 +66,12 @@ export const emitToUser = (socketId: string, event: string, data: any) => {
     timestamp: new Date()
   });
 };
+
+export const emitToDriverThatHeHasNewRideRequest = (driverSocketId: string, rideData: IRide) => {
+  const io = getIO();
+  if (!io) return;
+  io.to(driverSocketId).emit('new_ride_request', {
+    ...rideData,
+    timestamp: new Date()
+  });
+};

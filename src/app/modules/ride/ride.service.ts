@@ -146,84 +146,68 @@ const getAllRides = async () => {
     return ridesWithVehicle;
 }
 
+
 const getRideHistory = async (userId: string, token: JwtPayload, query: Record<string, string>) => {
-    if (userId !== token.userId && token.role !== Role.ADMIN) {
-        throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to view this ride history");
+  if (userId !== token.userId && token.role !== Role.ADMIN) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to view this ride history");
+  }
+
+  // Resolve whose rides to fetch based on role
+  let filter: any = {};
+
+  if (token.role === Role.RIDER) {
+    filter = { user: userId };
+  } else if (token.role === Role.DRIVER) {
+    const driver = await Driver.findOne({ user: userId });
+    if (!driver) {
+      throw new AppError(httpStatus.BAD_REQUEST, "You are not registered as a driver");
     }
-    let rides = [] as IRide[];
-    let metaData = null;
-
-    if (token.role === Role.RIDER) {
-        const queryBuilder = new QueryBuilder(Ride.find({ user: userId }).populate('driver').populate('user'), query)
-        const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
-        const [data, meta] = await Promise.all([
-            ridesWithQueryBuilder.build(),
-            queryBuilder.getMeta()
-        ])
-        rides = data;
-        metaData = meta;
-
+    filter = { driver: driver._id };
+  } else if (token.role === Role.ADMIN) {
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
     }
-    else if (token.role === Role.DRIVER) {
-        const driver = await Driver.findOne({ user: userId });
-
-        if (!driver) {
-            throw new AppError(httpStatus.BAD_REQUEST, "You are not registered as a driver");
-        }
-        const queryBuilder = new QueryBuilder(Ride.find({ driver: driver._id }).populate('driver').populate('user'), query)
-        const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
-        const [data, meta] = await Promise.all([
-            ridesWithQueryBuilder.build(),
-            queryBuilder.getMeta()
-        ])
-        rides = data;
-        metaData = meta;
+    if (targetUser.role === Role.RIDER) {
+      filter = { user: userId };
+    } else if (targetUser.role === Role.DRIVER) {
+      const driver = await Driver.findOne({ user: userId });
+      if (!driver) {
+        throw new AppError(httpStatus.BAD_REQUEST, "This user is not registered as a driver");
+      }
+      filter = { driver: driver._id };
+    } else {
+      filter = { user: userId }; // default fallback
     }
-    else if (token.role === Role.ADMIN) {
-        const user = await User.findById(userId);
-        if (!user) {
-            throw new AppError(httpStatus.NOT_FOUND, "User not found");
-        }
-        if (user.role === Role.RIDER) {
-            const queryBuilder = new QueryBuilder(Ride.find({ user: userId }).populate('driver').populate('user'), query)
-            const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
-            const [data, meta] = await Promise.all([
-                ridesWithQueryBuilder.build(),
-                queryBuilder.getMeta()
-            ])
-            rides = data;
-            metaData = meta;
+  }
 
-        }
-        else if (user.role === Role.DRIVER) {
-            const driver = await Driver.findOne({ user: userId });
-            if (!driver) {
-                throw new AppError(httpStatus.BAD_REQUEST, "This user is not registered as a driver");
-            }
-            const queryBuilder = new QueryBuilder(Ride.find({ driver: driver._id }).populate('driver').populate('user'), query)
-            const ridesWithQueryBuilder = await queryBuilder.dateBetweenSearch("createdAt").filter().paginate()
-            const [data, meta] = await Promise.all([
-                ridesWithQueryBuilder.build(),
-                queryBuilder.getMeta()
-            ])
-            rides = data;
-            metaData = meta;
-        }
-    }
+  // Build query with populations (avoid N+1 for vehicle)
+  const baseQuery = Ride.find(filter)
+    .populate('driver')
+    .populate('user')
+    .populate({ path: 'vehicle', select: '-user' });
 
-    const ridesWithVehicle = await Promise.all(rides.map(async (ride) => {
-        const vehicle = await Vehicle.findById(ride.vehicle)
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unused-vars
-        const { user, _id, ...vehicleData } = vehicle!.toObject();
-        return {
-            ...(ride as any).toObject(),
-            vehicle: vehicleData
-        };
+  const qb = new QueryBuilder(baseQuery as any, query);
+  const built = await qb
+    .dateBetweenSearch("createdAt")
+    .filter()
+    .sort()
+    .paginate();
 
-    }))
+  const [data, meta] = await Promise.all([built.build(), qb.getMeta()]);
 
-    return { meta: metaData, data: ridesWithVehicle };
-}
+  // Ensure vehicle is null-safe
+  const ridesWithVehicle = data.map((ride: any) => {
+    const obj = typeof ride.toObject === 'function' ? ride.toObject() : ride;
+    return {
+      ...obj,
+      vehicle: obj.vehicle ?? null,
+    };
+  });
+
+  return { meta, data: ridesWithVehicle };
+};
+// ...existing code...
 
 const getSingleRideDetails = async (rideId: string, token: JwtPayload) => {
     const ride = await Ride.findById(rideId).populate('driver').populate('user');
@@ -450,6 +434,7 @@ const getTotalRidesCount = async (userId: string, token: JwtPayload) => {
     }
     throw new AppError(httpStatus.BAD_REQUEST, "Invalid user role for ride count");
 }
+
 
 export const RideService = {
     createRide,
