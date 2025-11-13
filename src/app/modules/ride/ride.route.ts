@@ -17,8 +17,9 @@ router.get("/history/:userId", checkAuth(...Object.values(Role)), RideController
 router.patch("/reject/:rideId",checkAuth(Role.DRIVER),RideController.rejectRide);
 router.patch("/accept/:rideId",checkAuth(Role.DRIVER),RideController.acceptRide);
 router.post("/feedback/:rideId",validateRequest(createFeedbackZodSchema),checkAuth(Role.RIDER),RideController.createFeedback);
-router.get("/active-ride",checkAuth(Role.RIDER),RideController.getActiveRideForRider);
+router.get("/active-ride",checkAuth(Role.RIDER,Role.DRIVER),RideController.getActiveRide);
 router.get("/approximate-fare",checkAuth(...Object.values(Role)),RideController.getApproximateFare);
 router.get("/total-rides/:userId",checkAuth(...Object.values(Role)),RideController.getTotalRidesCount);
+router.get("/incoming-requests",checkAuth(Role.DRIVER),RideController.getIncomingRideRequests);
 
 export const rideRoutes = router;

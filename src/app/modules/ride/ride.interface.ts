@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
-import { ILocation } from "../driver/driver.interface";
+import { IDriver, ILocation } from "../driver/driver.interface";
+import { IVehicle } from "../vehicle/vehicle.interface";
 
 export enum RideStatus {
     'REQUESTED' = 'REQUESTED',
@@ -24,8 +25,8 @@ export interface IStatusLog {
 export interface IRide {
     _id?: Types.ObjectId;
     user: Types.ObjectId;
-    driver?: Types.ObjectId | null;
-    vehicle?: Types.ObjectId | null;
+    driver?: Types.ObjectId | IDriver | null;
+    vehicle?: Types.ObjectId | IVehicle | null;
     pickupLocation: ILocation;
     dropOffLocation: ILocation;
     status: RideStatus;

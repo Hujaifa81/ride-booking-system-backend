@@ -359,9 +359,8 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
         return ride;
     }
 
-    const driver = await Driver.findOne({ user: token.userId });
-
     if (token.role === Role.DRIVER) {
+        const driver = await Driver.findOne({ user: token.userId });
         if (!driver) {
             throw new AppError(httpStatus.NOT_FOUND, "Driver not found");
         }
@@ -484,12 +483,18 @@ export const cancelRide = async (rideId: string, canceledReason: string, token: 
 
         }
 
-        if (ride.driver && driver && driver.activeRide && String(driver.activeRide) === String(ride._id)) {
-            driver.activeRide = null;
-            driver.status = DriverStatus.AVAILABLE;
-            await driver.save();
+        if (ride.driver) {
+            const driver = await Driver.findOne({ _id: ride.driver });
+            if (driver && driver.activeRide && String(driver.activeRide) === String(ride._id)) {
+                driver.activeRide = null;
+                if (driver.status === DriverStatus.ON_TRIP) {
+                    driver.status = DriverStatus.AVAILABLE;
+                }
+                await driver.save();
+            }
         }
-        return ride;
+        const rideAllDetails=await Ride.findById(rideId).populate('driver').populate('user');
+        return rideAllDetails;
     }
 
 

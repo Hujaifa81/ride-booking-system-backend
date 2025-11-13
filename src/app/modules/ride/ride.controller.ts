@@ -5,15 +5,15 @@ import { sendResponse } from "../../utils/sendResponse";
 import { NextFunction, Request, Response } from "express";
 import httpStatus from 'http-status-codes';
 import { RideService } from "./ride.service";
-import { RideStatus } from "./ride.interface";
-import { emitRideUpdate, emitStatusChange } from "../../utils/socket";
-import { ILocation } from "../driver/driver.interface";
+import { IRide, RideStatus } from "./ride.interface";
+import { emitRideUpdate, emitStatusChange, emitToDriverThatHeHasNewRideRequest,  emitToDriverThatRideHasBeenCancelledOrTimeOut } from "../../utils/socket";
+import { IDriver, ILocation } from "../driver/driver.interface";
 import * as fs from 'fs';
 
 const createRide = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const ride = await RideService.createRide(req.body, req.user as JwtPayload);
     // emitRideUpdate(ride._id.toString(), ride);
-    if (ride.status === 'PENDING') {
+    if (ride && ride.status === 'PENDING') {
         sendResponse(res, {
             statusCode: httpStatus.OK,
             message: "No drivers are available at the moment. Your ride request is pending. We will notify you once a driver becomes available.",
@@ -23,6 +23,12 @@ const createRide = catchAsync(async (req: Request, res: Response, next: NextFunc
         return;
     }
 
+    emitToDriverThatHeHasNewRideRequest(
+        ride?.driver && typeof ride.driver === 'object' && 'user' in ride.driver
+            ? (ride.driver as IDriver).user.toString()
+            : '',
+        ride as IRide
+    );
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
         message: "Ride created successfully.Waiting for driver to accept the ride.",
@@ -51,11 +57,16 @@ const rideStatusChangeAfterRideAccepted = catchAsync(async (req: Request, res: R
 const cancelRide = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const rideId = req.params.rideId;
     const { canceledReason } = req.body;
-    console.log(canceledReason);
     const ride = await RideService.canceledRide(rideId, canceledReason, req.user as JwtPayload);
     emitStatusChange(rideId, ride?.status ?? '', (req.user as JwtPayload).userId);
-    if (ride) {
-        emitRideUpdate(rideId, ride);
+    if ((ride?.driver as IDriver)?.activeRide?.toString() !== rideId) {
+        emitToDriverThatRideHasBeenCancelledOrTimeOut((ride?.driver as IDriver)?.user?.toString(), rideId);
+    }
+    else {
+        if (ride) {
+            emitRideUpdate(rideId, ride);
+        }
+
     }
 
     sendResponse(res, {
@@ -79,7 +90,7 @@ const getAllRides = catchAsync(async (req: Request, res: Response, next: NextFun
 const getRideHistory = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.params.userId;
     const rides = await RideService.getRideHistory(userId, req.user as JwtPayload, req.query as Record<string, string>);
-    
+
     sendResponse(res, {
         statusCode: httpStatus.OK,
         message: `Ride history fetched successfully`,
@@ -151,9 +162,8 @@ const createFeedback = catchAsync(async (req: Request, res: Response, next: Next
     });
 })
 
-const getActiveRideForRider = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const userId = (req.user as JwtPayload).userId;
-    const ride = await RideService.getActiveRideForRider(userId);
+const getActiveRide = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const ride = await RideService.getActiveRide(req.user as JwtPayload);
     sendResponse(res, {
         statusCode: httpStatus.OK,
         message: `Active ride fetched successfully.`,
@@ -173,7 +183,7 @@ const getApproximateFare = catchAsync(async (req: Request, res: Response, next: 
         type: "Point",
         coordinates: dropoffLocation.split(',').map(Number) // [longitude, latitude]
     }
-    
+
     const fare = await RideService.getApproximateFare(pickupCoords as ILocation, dropCoords as ILocation);
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -189,10 +199,19 @@ const getTotalRidesCount = catchAsync(async (req: Request, res: Response, next: 
         statusCode: httpStatus.OK,
         message: `Total rides count fetched successfully.`,
         success: true,
-        data: totalRides 
+        data: totalRides
     });
 })
 
+const getIncomingRideRequests = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const allIncomingRides = await RideService.getIncomingRideRequests(req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: `Incoming ride requests fetched successfully.`,
+        success: true,
+        data: allIncomingRides
+    });
+});
 
 export const RideController = {
     createRide,
@@ -204,8 +223,9 @@ export const RideController = {
     rejectRide,
     acceptRide,
     createFeedback,
-    getActiveRideForRider,
+    getActiveRide,
     getApproximateFare,
     getTotalRidesCount,
+    getIncomingRideRequests
 
 }

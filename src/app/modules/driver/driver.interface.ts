@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { IUser } from "../user/user.interface";
 
 export enum DriverStatus {
     AVAILABLE = "AVAILABLE",
@@ -12,7 +13,7 @@ export interface ILocation {
 
 export interface IDriver {
     _id?: Types.ObjectId;
-    user: Types.ObjectId;
+    user: Types.ObjectId | IUser;
     licenseNumber: string;
     rating?: number;
     // vehicles?: Types.ObjectId[];

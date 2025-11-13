@@ -16,7 +16,10 @@ router.get("/earnings-history/:driverId",checkAuth(Role.DRIVER,Role.ADMIN), driv
 router.patch("/is-suspended/:driverId",checkAuth(Role.ADMIN), driverController.driverSuspendedStatusChange);
 router.patch("/rating/:driverId",validateRequest(driverRatingZodSchema),checkAuth(Role.RIDER), driverController.updateDriverRating);
 router.get("/my-driver-profile",checkAuth(Role.DRIVER,Role.RIDER), driverController.getMyDriverProfile);
-
+router.get("/dashboard-metrics",checkAuth(Role.DRIVER), driverController.getDriverDashboardMetrics);
+router.get("/earnings-analytics",checkAuth(Role.DRIVER), driverController.getDriverEarningsAnalytics);
+router.get("/peak-earning-hours",checkAuth(Role.DRIVER), driverController.getDriverPeakEarningHours);
+router.get("/top-earning-routes",checkAuth(Role.DRIVER), driverController.getDriverTopEarningRoutes);
 
 
 export const driverRoutes = router;

@@ -122,6 +122,45 @@ const getMyDriverProfile = catchAsync(async (req: Request, res: Response, next: 
     });
 });
 
+const getDriverDashboardMetrics = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const metrics = await DriverService.getDriverDashboardMetrics(req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Driver dashboard metrics fetched successfully.",
+        success: true,
+        data: metrics
+    });
+});
+const getDriverEarningsAnalytics = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const filter = req.query.filter as string || 'daily';
+    const analytics = await DriverService.getDriverEarningsAnalytics(req.user as JwtPayload, filter);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Driver earnings analytics fetched successfully.",
+        success: true,
+        data: analytics
+    });
+});
+const getDriverPeakEarningHours = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const peakHours = await DriverService.getDriverPeakEarningHours(req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Driver peak earning hours fetched successfully.",
+        success: true,
+        data: peakHours
+    });
+});
+
+const getDriverTopEarningRoutes = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const topRoutes = await DriverService.getDriverTopEarningRoutes(req.user as JwtPayload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Driver top earning routes fetched successfully.",
+        success: true,
+        data: topRoutes
+    });
+});
+
 export const driverController = {
     createDriver,
     getAllDrivers,
@@ -131,5 +170,9 @@ export const driverController = {
     getDriverEarningsHistory,
     driverSuspendedStatusChange,
     updateDriverRating,
-    getMyDriverProfile
+    getMyDriverProfile,
+    getDriverDashboardMetrics,
+    getDriverEarningsAnalytics,
+    getDriverPeakEarningHours,
+    getDriverTopEarningRoutes
 }

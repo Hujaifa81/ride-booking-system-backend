@@ -1,61 +1,101 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { RideStatus } from "../../modules/ride/ride.interface";
-import { Ride } from "../../modules/ride/ride.model";
-import { IsActive } from "../../modules/user/user.interface";
-import { User } from "../../modules/user/user.model";
-import { Vehicle } from "../../modules/vehicle/vehicle.model";
-import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";
-import { emitStatusChange } from "../../utils/socket";
 import { agenda } from "../agenda";
+import { Ride } from "../../modules/ride/ride.model";
+import { IRide, RideStatus } from "../../modules/ride/ride.interface";
+import { findNearestAvailableDriver } from "../../utils/findNearestAvailableDriver";
+import { Vehicle } from "../../modules/vehicle/vehicle.model";
+import { emitToDriverThatRideHasBeenCancelledOrTimeOut, emitToDriverThatHeHasNewRideRequest, emitStatusChange } from "../../utils/socket";
+import { IDriver } from "../../modules/driver/driver.interface";
+import { User } from "../../modules/user/user.model";
+import { IsActive } from "../../modules/user/user.interface";
 
-
-// Define all jobs here (only once)
 agenda.define("driverResponseTimeout", async (job: any) => {
+
   const { rideId, driverId } = job.attrs.data as { rideId: string; driverId: string };
-  const ride = await Ride.findById(rideId);
 
-  if (!ride || ride.status !== RideStatus.REQUESTED || ride?.driver?.toString() !== driverId) return;
+  const ride = await Ride.findById(rideId).populate("driver").populate("user");
 
-  console.log(`Driver ${driverId} did not respond in time for ride ${rideId}`);
 
-  ride.rejectedDrivers.push(ride.driver);
+  // Compare as strings to avoid ObjectId mismatch
+  const rideDriverId = ride?.driver?._id?.toString();
+  const expectedDriverId = String(driverId);
+
+
+
+  if (
+    !ride ||
+    ride.status !== RideStatus.REQUESTED ||
+    rideDriverId !== expectedDriverId
+  ) {
+    return;
+  }
+
+  console.log(`[driverResponseTimeout] Timeout! Driver ${driverId} did not respond. Finding new driver...`);
+
+  // Emit timeout message to driver
+  const driverUser = (ride.driver as IDriver).user;
+  emitToDriverThatRideHasBeenCancelledOrTimeOut(driverUser.toString(), rideId);
+
+  // Remove current driver and find a new one
+  if (ride.driver && ride.driver._id) {
+    ride.rejectedDrivers.push(ride.driver._id);
+  }
   ride.driver = null;
   ride.vehicle = null;
   await ride.save();
 
+  // Cancel timeout job for this driver
+  await agenda.cancel({
+    name: "driverResponseTimeout",
+    "data.rideId": rideId,
+    "data.driverId": driverId,
+  });
+
   const newDriver = await findNearestAvailableDriver(rideId);
 
   if (newDriver) {
+    console.log(`[driverResponseTimeout] Found new driver ${newDriver._id}`);
     ride.driver = newDriver._id;
-    ride.status = RideStatus.REQUESTED;
+    const activeVehicle = await Vehicle.findOne({ user: newDriver.user, isActive: true });
+    ride.vehicle = activeVehicle?._id;
     await ride.save();
 
-    // cancel old timeout job
-    await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString(), "data.driverId": driverId });
-
-    // schedule new timeout job for new driver
+    // Schedule timeout for new driver
     await agenda.schedule("5 minutes", "driverResponseTimeout", {
-      rideId: ride._id.toString(),
+      rideId: rideId,
       driverId: newDriver._id.toString(),
     });
+
+    // Notify new driver
+    const rideWithDriver = await Ride.findById(rideId).populate("driver").populate("user");
+    emitToDriverThatHeHasNewRideRequest(newDriver.user.toString(), rideWithDriver as IRide);
   } else {
+    console.log(`[driverResponseTimeout] No new driver found. Setting ride to PENDING`);
     ride.status = RideStatus.PENDING;
-    ride.driver = null;
-    ride.vehicle = null;
+    ride.statusHistory.push({
+      status: RideStatus.PENDING,
+      timestamp: new Date(),
+      by: "SYSTEM",
+    });
     await ride.save();
 
-    try {
-      await agenda.every("30 seconds", "checkPendingRide", { rideId: ride._id.toString() });
-    } catch (err) {
-      console.error(`[ERROR] Failed to schedule checkPendingRide job for ride ${ride._id.toString()}:`, err);
-    }
+    // Start repeating job to retry every 30 seconds
+    await agenda.every("30 seconds", "checkPendingRide", { rideId: rideId });
   }
 });
 
 agenda.define("checkPendingRide", async (job: any) => {
+  console.log("[checkPendingRide] Job started for rideId:", job.attrs.data.rideId);
   const { rideId } = job.attrs.data as { rideId: string };
-  console.log(rideId); const ride = await Ride.findById(rideId);
-  if (!ride || ride.status !== RideStatus.PENDING) return;
+
+  const ride = await Ride.findById(rideId);
+
+  if (!ride || ride.status !== RideStatus.PENDING) {
+    console.log("[checkPendingRide] Ride not in PENDING status or not found");
+    await agenda.cancel({ name: "checkPendingRide", "data.rideId": rideId });
+    return;
+  }
+
   const now = Date.now(); const createdAt = new Date(ride.createdAt as Date).getTime();
   // Cancel ride if pending > 10 minute from creation
   if (now - createdAt >= 10 * 60 * 1000) {
@@ -74,23 +114,32 @@ agenda.define("checkPendingRide", async (job: any) => {
     await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString() });
     console.log(`Ride ${rideId} cancelled after 10 mins`); return;
   }
-  // Try to assign a driver again 
-  const driver = await findNearestAvailableDriver(rideId.toString());
+  const newDriver = await findNearestAvailableDriver(rideId);
 
-  if (driver) {
-    
-    ride.driver = driver._id;
-    const activeVehicle = await Vehicle.findOne({ user: driver.user, isActive: true });
-    ride.vehicle = activeVehicle?._id;
+  if (newDriver) {
+    console.log(`[checkPendingRide] Found driver ${newDriver._id}`);
+    ride.driver = newDriver._id;
     ride.status = RideStatus.REQUESTED;
+    const activeVehicle = await Vehicle.findOne({ user: newDriver.user, isActive: true });
+    ride.vehicle = activeVehicle?._id;
     await ride.save();
-    await agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString() });
-    // Schedule new timeout job for the newly assigned driver 
-    await agenda.schedule("5 minutes", "driverResponseTimeout", { rideId: ride._id.toString(), driverId: driver._id.toString() });
-    await agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id.toString() });
+
+    // Cancel the repeating job
+    await agenda.cancel({ name: "checkPendingRide", "data.rideId": rideId });
+
+    // Schedule timeout for this driver
+    await agenda.schedule("5 minutes", "driverResponseTimeout", {
+      rideId: rideId,
+      driverId: newDriver._id.toString(),
+    });
+
+    // Notify driver
+    const rideWithDriver = await Ride.findById(rideId).populate("driver").populate("user");
+    emitToDriverThatHeHasNewRideRequest(newDriver.user.toString(), rideWithDriver as IRide);
+  } else {
+    console.log("[checkPendingRide] No driver available yet, will retry in 30 seconds");
   }
-  
-}); 
+});
 
 // when user is blocked for 3 time cancellation in a day, unblock after 24 hours
 agenda.define("unblockUserAfter24Hours", async (job: any) => {
@@ -103,4 +152,5 @@ agenda.define("unblockUserAfter24Hours", async (job: any) => {
     await agenda.cancel({ name: "unblockUserAfter24Hours", "data.userId": userId });
   }
 });
-                
+
+

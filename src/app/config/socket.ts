@@ -149,6 +149,7 @@ export const initializeSocket = (server: HTTPServer) => {
             socket.leave(`ride_${rideId}`);
             rideRooms.get(rideId)?.delete(socket.id);
             console.log(`User ${socket.data.user.userId} left ride room: ${rideId}`);
+            
         });
 
         socket.on('driver_location_update', ({ rideId, location }) => {
