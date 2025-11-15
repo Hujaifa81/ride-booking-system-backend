@@ -44,23 +44,7 @@ const allowedOrigins = [
     'http://localhost:5174',
     'https://ride-booking-frontend-eta.vercel.app' // ADDED: explicit frontend URL
 ].filter(Boolean); // Remove undefined/null values
-app.use(expressSession({
-    secret: envVars.EXPRESS_SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    name: 'sessionId', // ADDED: custom session cookie name
-    cookie: {
-        secure: envVars.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        domain: envVars.NODE_ENV === 'production' ? undefined : 'localhost',
-        path: '/', // ADDED: explicit path
-    },
-    proxy: envVars.NODE_ENV === 'production',
-    rolling: true, // ADDED: reset expiration on each request
-    unset: 'destroy' // ADDED: destroy session on logout
-}));
+
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (mobile apps, Postman, etc.)
