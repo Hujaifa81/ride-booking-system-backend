@@ -294,8 +294,8 @@ const cancelRide = (rideId, canceledReason, token) => __awaiter(void 0, void 0, 
         }
         return ride;
     }
-    const driver = yield driver_model_1.Driver.findOne({ user: token.userId });
     if (token.role === user_interface_1.Role.DRIVER) {
+        const driver = yield driver_model_1.Driver.findOne({ user: token.userId });
         if (!driver) {
             throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
         }
@@ -365,6 +365,9 @@ const cancelRide = (rideId, canceledReason, token) => __awaiter(void 0, void 0, 
         if (ride.status === ride_interface_1.RideStatus.COMPLETED) {
             throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You cannot cancel a completed ride.");
         }
+        if (ride.status === ride_interface_1.RideStatus.ACCEPTED) {
+            throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You cannot cancel a ride that has been accepted by a driver. Please contact support if you wish to cancel this ride.");
+        }
         if (ride.status === ride_interface_1.RideStatus.REACHED_DESTINATION) {
             throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You cannot cancel a ride that has reached the destination.");
         }
@@ -397,12 +400,18 @@ const cancelRide = (rideId, canceledReason, token) => __awaiter(void 0, void 0, 
             //schedule a job to unblock the rider after 24 hours
             yield agenda_1.agenda.schedule("24 hours", "unblockUserAfter24Hours", { userId: token.userId.toString() });
         }
-        if (ride.driver && driver && driver.activeRide && String(driver.activeRide) === String(ride._id)) {
-            driver.activeRide = null;
-            driver.status = driver_interface_1.DriverStatus.AVAILABLE;
-            yield driver.save();
+        if (ride.driver) {
+            const driver = yield driver_model_1.Driver.findOne({ _id: ride.driver });
+            if (driver && driver.activeRide && String(driver.activeRide) === String(ride._id)) {
+                driver.activeRide = null;
+                if (driver.status === driver_interface_1.DriverStatus.ON_TRIP) {
+                    driver.status = driver_interface_1.DriverStatus.AVAILABLE;
+                }
+                yield driver.save();
+            }
         }
-        return ride;
+        const rideAllDetails = yield ride_model_1.Ride.findById(rideId).populate('driver').populate('user');
+        return rideAllDetails;
     }
 });
 exports.cancelRide = cancelRide;

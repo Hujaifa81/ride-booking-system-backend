@@ -7,7 +7,7 @@ const setCookie = (res, tokenInfo) => {
         res.cookie("accessToken", tokenInfo.accessToken, {
             httpOnly: true,
             secure: env_1.envVars.NODE_ENV === "production",
-            sameSite: "none"
+            sameSite: "lax"
         });
     }
     if (tokenInfo.refreshToken) {

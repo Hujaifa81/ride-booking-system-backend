@@ -12,18 +12,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const http_1 = require("http");
 const env_1 = require("./app/config/env");
 const mongoose_1 = __importDefault(require("mongoose"));
 const app_1 = __importDefault(require("./app"));
 const seedAdmin_1 = require("./app/utils/seedAdmin");
 const agenda_1 = require("./app/agenda/agenda");
 require("./app/agenda/jobs/ride.job");
+const socket_1 = require("./app/config/socket");
 let server;
 const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield mongoose_1.default.connect(env_1.envVars.DB_URL);
         console.log("Connected to DB!!");
-        server = app_1.default.listen(env_1.envVars.PORT, () => {
+        const httpServer = (0, http_1.createServer)(app_1.default);
+        (0, socket_1.initializeSocket)(httpServer);
+        server = httpServer.listen(env_1.envVars.PORT, () => {
             console.log(`Server is listening to port ${env_1.envVars.PORT}`);
         });
     }

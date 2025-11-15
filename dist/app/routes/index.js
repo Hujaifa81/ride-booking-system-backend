@@ -38,6 +38,6 @@ const moduleRoutes = [
     {
         path: '/report',
         route: report_route_1.reportRoutes
-    }
+    },
 ];
 moduleRoutes.forEach((route) => exports.router.use(route.path, route.route));

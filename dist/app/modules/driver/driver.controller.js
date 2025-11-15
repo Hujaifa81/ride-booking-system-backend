@@ -103,6 +103,52 @@ const updateDriverRating = (0, catchAsync_1.catchAsync)((req, res, next) => __aw
         data: result
     });
 }));
+const getMyDriverProfile = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const driverProfile = yield driver_service_1.DriverService.getMyDriverProfile(req.user);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver profile fetched successfully.",
+        success: true,
+        data: driverProfile
+    });
+}));
+const getDriverDashboardMetrics = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const metrics = yield driver_service_1.DriverService.getDriverDashboardMetrics(req.user);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver dashboard metrics fetched successfully.",
+        success: true,
+        data: metrics
+    });
+}));
+const getDriverEarningsAnalytics = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const filter = req.query.filter || 'daily';
+    const analytics = yield driver_service_1.DriverService.getDriverEarningsAnalytics(req.user, filter);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver earnings analytics fetched successfully.",
+        success: true,
+        data: analytics
+    });
+}));
+const getDriverPeakEarningHours = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const peakHours = yield driver_service_1.DriverService.getDriverPeakEarningHours(req.user);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver peak earning hours fetched successfully.",
+        success: true,
+        data: peakHours
+    });
+}));
+const getDriverTopEarningRoutes = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const topRoutes = yield driver_service_1.DriverService.getDriverTopEarningRoutes(req.user);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Driver top earning routes fetched successfully.",
+        success: true,
+        data: topRoutes
+    });
+}));
 exports.driverController = {
     createDriver,
     getAllDrivers,
@@ -111,5 +157,10 @@ exports.driverController = {
     driverLocationUpdate,
     getDriverEarningsHistory,
     driverSuspendedStatusChange,
-    updateDriverRating
+    updateDriverRating,
+    getMyDriverProfile,
+    getDriverDashboardMetrics,
+    getDriverEarningsAnalytics,
+    getDriverPeakEarningHours,
+    getDriverTopEarningRoutes
 };

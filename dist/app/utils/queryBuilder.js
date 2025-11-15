@@ -32,6 +32,29 @@ class QueryBuilder {
         }
         return this;
     }
+    dateBetweenSearch(dateField) {
+        const { startDate, endDate } = this.query;
+        const isDateOnly = (s) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+        const mkStart = (s) => isDateOnly(s) ? new Date(`${s}T00:00:00`) : new Date(s);
+        const mkEnd = (s) => isDateOnly(s) ? new Date(`${s}T23:59:59.999`) : new Date(s);
+        if (startDate && endDate) {
+            const start = mkStart(startDate);
+            const end = mkEnd(endDate);
+            this.modelQuery = this.modelQuery.find({ [dateField]: { $gte: start, $lte: end } });
+            return this;
+        }
+        if (startDate && !endDate) {
+            const start = mkStart(startDate);
+            this.modelQuery = this.modelQuery.find({ [dateField]: { $gte: start } });
+            return this;
+        }
+        if (!startDate && endDate) {
+            const end = mkEnd(endDate);
+            this.modelQuery = this.modelQuery.find({ [dateField]: { $lte: end } });
+            return this;
+        }
+        return this;
+    }
     filter() {
         const filter = Object.assign({}, this.query);
         for (const field of constants_1.excludeField) {
@@ -76,11 +99,15 @@ class QueryBuilder {
     }
     getMeta() {
         return __awaiter(this, void 0, void 0, function* () {
-            const query = this.modelQuery.clone(); // clone to avoid execution conflict
-            const totalDocuments = yield query.countDocuments();
-            const page = Number(this.query.page) || 1;
-            const limit = Number(this.query.limit) || 10;
-            const totalPage = Math.ceil(totalDocuments / limit);
+            const q = this.modelQuery;
+            const filter = q.getFilter();
+            // typeof q.getFilter === "function" ? q.getFilter() : (q._conditions || {});
+            const totalDocuments = yield q.model.countDocuments(filter);
+            const rawPage = Number(this.query.page);
+            const rawLimit = Number(this.query.limit);
+            const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+            const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 100) : 10;
+            const totalPage = Math.max(1, Math.ceil((totalDocuments || 0) / limit));
             return { page, limit, total: totalDocuments, totalPage };
         });
     }

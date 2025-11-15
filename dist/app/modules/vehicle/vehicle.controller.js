@@ -26,17 +26,27 @@ const createVehicle = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter
         data: vehicle
     });
 }));
-const activeVehicle = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const vehicleId = req.params.vehicleId;
-    const vehicle = yield vehicle_service_1.VehicleService.activeVehicle(vehicleId, req.user);
+const getMyVehicles = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const vehicles = yield vehicle_service_1.VehicleService.getMyVehicles(req.user);
     (0, sendResponse_1.sendResponse)(res, {
         statusCode: http_status_codes_1.default.OK,
-        message: "Vehicle activated successfully",
+        message: "Vehicles fetched successfully",
+        success: true,
+        data: vehicles
+    });
+}));
+const activeVehicleStatusChange = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const vehicleId = req.params.vehicleId;
+    const vehicle = yield vehicle_service_1.VehicleService.activeVehicleStatusChange(vehicleId, req.user);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Vehicle status changed successfully",
         success: true,
         data: vehicle
     });
 }));
 exports.vehicleController = {
     createVehicle,
-    activeVehicle
+    getMyVehicles,
+    activeVehicleStatusChange
 };

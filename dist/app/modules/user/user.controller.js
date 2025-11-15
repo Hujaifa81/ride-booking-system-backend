@@ -45,8 +45,18 @@ const updateUser = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(vo
         data: user
     });
 }));
+const getMyProfile = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = yield user_service_1.UserService.getMyProfile(req.user);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "User profile fetched successfully",
+        success: true,
+        data: user
+    });
+}));
 exports.userController = {
     register,
     getAllUsers,
     updateUser,
+    getMyProfile
 };

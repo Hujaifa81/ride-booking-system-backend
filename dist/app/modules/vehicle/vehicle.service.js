@@ -32,27 +32,21 @@ const createVehicle = (payload, token) => __awaiter(void 0, void 0, void 0, func
     const vehicle = yield vehicle_model_1.Vehicle.create(Object.assign(Object.assign({}, payload), { user: token.userId }));
     return vehicle;
 });
-const activeVehicle = (vehicleId, token) => __awaiter(void 0, void 0, void 0, function* () {
+const getMyVehicles = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    const vehicles = yield vehicle_model_1.Vehicle.find({ user: token.userId, isDeleted: false });
+    return vehicles;
+});
+const activeVehicleStatusChange = (vehicleId, token) => __awaiter(void 0, void 0, void 0, function* () {
     const vehicle = yield vehicle_model_1.Vehicle.findOne({ _id: vehicleId, user: token.userId });
     if (!vehicle) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Vehicle not found");
     }
-    if (vehicle.isDeleted) {
-        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Vehicle is deleted");
-    }
-    if (vehicle.isActive) {
-        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Vehicle is already active");
-    }
-    vehicle.isActive = true;
+    vehicle.isActive = !vehicle.isActive;
     yield vehicle.save();
-    const otherVehicles = yield vehicle_model_1.Vehicle.find({ user: token.userId, _id: { $ne: vehicleId } });
-    for (const otherVehicle of otherVehicles) {
-        otherVehicle.isActive = false;
-        yield otherVehicle.save();
-    }
     return vehicle;
 });
 exports.VehicleService = {
     createVehicle,
-    activeVehicle
+    getMyVehicles,
+    activeVehicleStatusChange
 };

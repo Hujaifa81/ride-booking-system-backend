@@ -1,4 +1,4 @@
-import { Server,createServer } from 'http';
+import { Server, createServer } from 'http';
 import { envVars } from './app/config/env';
 import mongoose from 'mongoose';
 import app from './app';
@@ -7,80 +7,87 @@ import { agenda } from './app/agenda/agenda';
 import './app/agenda/jobs/ride.job';
 import { initializeSocket } from './app/config/socket';
 
+let server: Server;
 
-
-let server: Server
+async function connectDB() {
+    try {
+        await mongoose.connect(envVars.DB_URL);
+        console.log("✅ Connected to DB!!");
+    } catch (error) {
+        console.error("❌ DB connection error:", error);
+        throw error;
+    }
+}
 
 const startServer = async () => {
     try {
-        await mongoose.connect(envVars.DB_URL)
+        await connectDB();
 
-        console.log("Connected to DB!!");
         const httpServer = createServer(app);
         initializeSocket(httpServer);
 
-        server = httpServer.listen(envVars.PORT, () => {
-            console.log(`Server is listening to port ${envVars.PORT}`);
+        const port = envVars.PORT || 5000;
+        server = httpServer.listen(port, () => {
+            console.log(`🚀 Server is listening on port ${port}`);
         });
+
+        // Start agenda for background jobs
+        await agenda.start();
+        console.log('✅ Agenda started');
+
+        // Seed admin (only in development or first run)
+        if (process.env.NODE_ENV !== 'production') {
+            await seedAdmin();
+        }
     } catch (error) {
-        console.log(error);
+        console.error("❌ Server startup error:", error);
+        throw error;
     }
 }
-(async () => {
-    await startServer();
-    await seedAdmin();
-    await agenda.start();
-    
-})()
 
-process.on("SIGTERM", () => {
-    console.log("SIGTERM signal received... Server shutting down..");
+startServer();
 
+// Graceful shutdown handlers
+process.on("SIGTERM", async () => {
+    console.log("⏳ SIGTERM signal received... Server shutting down..");
+    await agenda.stop();
     if (server) {
         server.close(() => {
-            process.exit(1)
+            mongoose.connection.close();
+            process.exit(0);
         });
     }
-
-    process.exit(1)
 })
 
-process.on("SIGINT", () => {
-    console.log("SIGINT signal received... Server shutting down..");
-
+process.on("SIGINT", async () => {
+    console.log("⏳ SIGINT signal received... Server shutting down..");
+    await agenda.stop();
     if (server) {
         server.close(() => {
-            process.exit(1)
+            mongoose.connection.close();
+            process.exit(0);
         });
     }
-
-    process.exit(1)
 })
-
 
 process.on("unhandledRejection", (err) => {
-    console.log("Unhandled Rejection detected... Server shutting down..", err);
-
+    console.error("❌ Unhandled Rejection detected... Server shutting down..", err);
     if (server) {
         server.close(() => {
-            process.exit(1)
+            process.exit(1);
         });
     }
-
-    process.exit(1)
+    process.exit(1);
 })
 
 process.on("uncaughtException", (err) => {
-    console.log("Uncaught Exception detected... Server shutting down..", err);
-
+    console.error("❌ Uncaught Exception detected... Server shutting down..", err);
     if (server) {
         server.close(() => {
-            process.exit(1)
+            process.exit(1);
         });
     }
-
-    process.exit(1)
+    process.exit(1);
 })
 
-
-
+export default app;

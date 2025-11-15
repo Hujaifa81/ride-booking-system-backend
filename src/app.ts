@@ -12,24 +12,54 @@ import { envVars } from './app/config/env';
 import './app/config/passport'
 
 const app = express()
+
+// Cookie parser should come before session
+app.use(cookieParser())
+
 app.use(expressSession({
     secret: envVars.EXPRESS_SESSION_SECRET,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // true in production
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        // maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
 }))
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.set('trust proxy',1) 
-app.use(cors(
-    {
-        origin: envVars.FRONTEND_URL,
-        credentials: true,
+app.set('trust proxy', 1) 
+
+// Enhanced CORS configuration for Vercel
+const allowedOrigins = [
+    envVars.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174'
+].filter(Boolean); // Remove undefined/null values
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
         
-    }
-))
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['Set-Cookie'],
+    optionsSuccessStatus: 200
+}))
+
 app.use(passport.initialize())
 app.use(passport.session())
-app.use(cookieParser())
 
 app.use("/api/v1", router)
 

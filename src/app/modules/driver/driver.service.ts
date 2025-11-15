@@ -468,14 +468,23 @@ const getDriverEarningsAnalytics = async (token: JwtPayload, filter: string) => 
     prevWeekStart.setDate(prevWeekStart.getDate() - 7);
     previousPeriodStart = new Date(prevWeekStart);
     previousPeriodEnd = new Date(prevWeekStart);
-    previousPeriodEnd.setDate(previousPeriodEnd.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    previousPeriodEnd.setDate(previousPeriodEnd.getDate() + 6);
     previousPeriodEnd.setHours(23, 59, 59, 999);
 
-    // Calculate current week number of the year
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const pastDaysOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
-    const currentWeekOfYear = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+    // Calculate current week number using ISO week date system
+    const getISOWeek = (date: Date) => {
+      const target = new Date(date.valueOf());
+      const dayNumber = (date.getDay() + 6) % 7;
+      target.setDate(target.getDate() - dayNumber + 3);
+      const firstThursday = target.valueOf();
+      target.setMonth(0, 1);
+      if (target.getDay() !== 4) {
+        target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+      }
+      return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+    };
 
+    const currentWeekOfYear = getISOWeek(now);
     periodLabel = `Week ${currentWeekOfYear} of ${now.getFullYear()}`;
 
     const yearStart = new Date(now.getFullYear(), 0, 1);
@@ -497,7 +506,7 @@ const getDriverEarningsAnalytics = async (token: JwtPayload, filter: string) => 
         $group: {
           _id: {
             year: { $year: "$statusHistory.timestamp" },
-            week: { $week: "$statusHistory.timestamp" }
+            week: { $isoWeek: "$statusHistory.timestamp" }  // Use $isoWeek instead of $week
           },
           totalEarnings: { $sum: { $multiply: ["$finalFare", 0.75] } },
           rideCount: { $sum: 1 }
@@ -555,12 +564,17 @@ const getDriverEarningsAnalytics = async (token: JwtPayload, filter: string) => 
     // Generate details for all weeks from 1 to current week
     const details = [];
     
-    // Helper function to get week date range
+    // Helper function to get week date range using ISO week
     const getWeekDateRange = (year: number, weekNum: number) => {
-      const firstDayOfYear = new Date(year, 0, 1);
-      const daysOffset = (weekNum - 1) * 7;
-      const weekStart = new Date(firstDayOfYear);
-      weekStart.setDate(firstDayOfYear.getDate() + daysOffset - firstDayOfYear.getDay() + 1);
+      // Get first Thursday of the year (defines week 1)
+      const jan4 = new Date(year, 0, 4);
+      const jan4Day = (jan4.getDay() + 6) % 7; // Convert to Monday = 0
+      const weekOneStart = new Date(jan4);
+      weekOneStart.setDate(jan4.getDate() - jan4Day);
+      
+      // Calculate the start of the target week
+      const weekStart = new Date(weekOneStart);
+      weekStart.setDate(weekOneStart.getDate() + (weekNum - 1) * 7);
       
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
@@ -609,7 +623,7 @@ const getDriverEarningsAnalytics = async (token: JwtPayload, filter: string) => 
       },
       details
     };
-  } 
+  }
   else if (filter === 'monthly') {
     currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1);
     currentPeriodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);

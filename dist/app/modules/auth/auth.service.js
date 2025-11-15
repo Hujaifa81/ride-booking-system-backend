@@ -25,7 +25,7 @@ const resetPassword = (oldPassword, newPassword, decodedToken) => __awaiter(void
     }
     const isMatch = yield (0, hashedPassword_1.comparePassword)(oldPassword, user.password);
     if (!isMatch) {
-        throw new AppError_1.default(http_status_codes_1.default.UNAUTHORIZED, "Old password does not match");
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Current password does not match");
     }
     const hashedNewPassword = yield (0, hashedPassword_1.hashedPassword)(newPassword);
     user.password = hashedNewPassword;

@@ -37,6 +37,7 @@ const driver_interface_1 = require("../driver/driver.interface");
 const agenda_1 = require("../../agenda/agenda");
 const user_model_1 = require("../user/user.model");
 const user_interface_1 = require("../user/user.interface");
+const queryBuilder_1 = require("../../utils/queryBuilder");
 const createRide = (rideData, token) => __awaiter(void 0, void 0, void 0, function* () {
     const rides = yield ride_model_1.Ride.find({ user: token.userId, status: { $in: [ride_interface_1.RideStatus.ACCEPTED, ride_interface_1.RideStatus.IN_TRANSIT, ride_interface_1.RideStatus.GOING_TO_PICK_UP, ride_interface_1.RideStatus.DRIVER_ARRIVED, ride_interface_1.RideStatus.REQUESTED, ride_interface_1.RideStatus.PENDING] } });
     const user = yield user_model_1.User.findById(token.userId);
@@ -90,7 +91,8 @@ const createRide = (rideData, token) => __awaiter(void 0, void 0, void 0, functi
     yield ride.save();
     // Schedule job to check driver response after 5 minute
     yield agenda_1.agenda.schedule("5 minutes", "driverResponseTimeout", { rideId: ride._id.toString(), driverId: driver._id.toString() });
-    return ride;
+    const rideWithDriverPopulated = yield ride_model_1.Ride.findById(ride._id).populate('driver').populate('user');
+    return rideWithDriverPopulated;
 });
 const rideStatusChangeAfterRideAccepted = (rideId, status, token) => __awaiter(void 0, void 0, void 0, function* () {
     if (status === ride_interface_1.RideStatus.GOING_TO_PICK_UP) {
@@ -128,57 +130,79 @@ const getAllRides = () => __awaiter(void 0, void 0, void 0, function* () {
     })));
     return ridesWithVehicle;
 });
-const getRideHistory = (userId, token) => __awaiter(void 0, void 0, void 0, function* () {
+const getRideHistory = (userId, token, query) => __awaiter(void 0, void 0, void 0, function* () {
     if (userId !== token.userId && token.role !== user_interface_1.Role.ADMIN) {
         throw new AppError_1.default(http_status_codes_1.default.UNAUTHORIZED, "You are not authorized to view this ride history");
     }
-    let rides = [];
+    // Resolve whose rides to fetch based on role
+    let filter = {};
     if (token.role === user_interface_1.Role.RIDER) {
-        rides = yield ride_model_1.Ride.find({ user: userId }).populate('driver').populate('user');
+        filter = { user: userId };
     }
     else if (token.role === user_interface_1.Role.DRIVER) {
         const driver = yield driver_model_1.Driver.findOne({ user: userId });
         if (!driver) {
             throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You are not registered as a driver");
         }
-        rides = yield ride_model_1.Ride.find({ driver: driver._id }).populate('driver').populate('user');
+        filter = {
+            driver: driver._id
+        };
     }
     else if (token.role === user_interface_1.Role.ADMIN) {
-        const user = yield user_model_1.User.findById(userId);
-        if (!user) {
+        const targetUser = yield user_model_1.User.findById(userId);
+        if (!targetUser) {
             throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User not found");
         }
-        if (user.role === user_interface_1.Role.RIDER) {
-            rides = yield ride_model_1.Ride.find({ user: userId }).populate('driver').populate('user');
+        if (targetUser.role === user_interface_1.Role.RIDER) {
+            filter = { user: userId };
         }
-        else if (user.role === user_interface_1.Role.DRIVER) {
+        else if (targetUser.role === user_interface_1.Role.DRIVER) {
             const driver = yield driver_model_1.Driver.findOne({ user: userId });
             if (!driver) {
                 throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "This user is not registered as a driver");
             }
-            rides = yield ride_model_1.Ride.find({ driver: driver._id }).populate('driver').populate('user');
+            filter = { driver: driver._id };
+        }
+        else {
+            filter = { user: userId }; // default fallback
         }
     }
-    const ridesWithVehicle = yield Promise.all(rides.map((ride) => __awaiter(void 0, void 0, void 0, function* () {
-        const vehicle = yield vehicle_model_1.Vehicle.findById(ride.vehicle);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unused-vars
-        const _a = vehicle.toObject(), { user, _id } = _a, vehicleData = __rest(_a, ["user", "_id"]);
-        return Object.assign(Object.assign({}, ride.toObject()), { vehicle: vehicleData });
-    })));
-    return ridesWithVehicle;
+    // Build query with populations (avoid N+1 for vehicle)
+    const baseQuery = ride_model_1.Ride.find(filter)
+        .populate('driver')
+        .populate('user')
+        .populate({ path: 'vehicle', select: '-user' });
+    const qb = new queryBuilder_1.QueryBuilder(baseQuery, query);
+    const built = yield qb
+        .dateBetweenSearch("createdAt")
+        .filter()
+        .sort()
+        .paginate();
+    const [data, meta] = yield Promise.all([built.build(), qb.getMeta()]);
+    // Ensure vehicle is null-safe
+    const ridesWithVehicle = data.map((ride) => {
+        var _a;
+        const obj = typeof ride.toObject === 'function' ? ride.toObject() : ride;
+        return Object.assign(Object.assign({}, obj), { vehicle: (_a = obj.vehicle) !== null && _a !== void 0 ? _a : null });
+    });
+    return { meta, data: ridesWithVehicle };
 });
 const getSingleRideDetails = (rideId, token) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     const ride = yield ride_model_1.Ride.findById(rideId).populate('driver').populate('user');
     if (!ride) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Ride not found");
     }
-    if (ride.user._id.toString() !== token.userId && ((_a = ride.driver) === null || _a === void 0 ? void 0 : _a._id.toString()) !== token.userId && token.role !== 'admin') {
+    if (ride.user._id.toString() !== token.userId &&
+        token.role !== 'ADMIN' &&
+        (ride.driver &&
+            typeof ride.driver === 'object' &&
+            'user' in ride.driver &&
+            ride.driver.user.toString() !== token.userId)) {
         throw new AppError_1.default(http_status_codes_1.default.UNAUTHORIZED, "You are not authorized to view this ride details");
     }
     const rideWithVehicle = yield vehicle_model_1.Vehicle.findById(ride.vehicle);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unused-vars
-    const _b = rideWithVehicle.toObject(), { user, _id } = _b, vehicleData = __rest(_b, ["user", "_id"]);
+    const _a = rideWithVehicle.toObject(), { user, _id } = _a, vehicleData = __rest(_a, ["user", "_id"]);
     return Object.assign(Object.assign({}, ride.toObject()), { vehicle: vehicleData });
 });
 const rejectRide = (rideId, token) => __awaiter(void 0, void 0, void 0, function* () {
@@ -213,7 +237,11 @@ const rejectRide = (rideId, token) => __awaiter(void 0, void 0, void 0, function
         ride.vehicle = activeVehicle === null || activeVehicle === void 0 ? void 0 : activeVehicle._id;
         yield ride.save();
         // Schedule new timeout job for the newly assigned driver
-        yield agenda_1.agenda.schedule("5 minutes", "driverResponseTimeout", { rideId: ride._id.toString(), driverId: newDriver._id.toString() });
+        yield agenda_1.agenda.schedule("5 minutes", "driverResponseTimeout", {
+            rideId: ride._id.toString(),
+            driverId: newDriver._id.toString(),
+        });
+        console.log("[job] Scheduled driverResponseTimeout in 5 minutes");
     }
     else {
         ride.status = ride_interface_1.RideStatus.PENDING;
@@ -270,7 +298,12 @@ const acceptRide = (rideId, token) => __awaiter(void 0, void 0, void 0, function
     // Cancel any existing timeout job for this ride and driver
     yield agenda_1.agenda.cancel({ name: "driverResponseTimeout", "data.rideId": ride._id.toString(), "data.driverId": token.userId });
     yield agenda_1.agenda.cancel({ name: "checkPendingRide", "data.rideId": ride._id.toString() });
-    return ride;
+    const updatedRide = yield ride_model_1.Ride.findById(rideId)
+        .populate('user')
+        .populate('driver')
+        .populate('vehicle')
+        .lean();
+    return updatedRide;
 });
 const createFeedback = (rideId, feedback, token) => __awaiter(void 0, void 0, void 0, function* () {
     const ride = yield ride_model_1.Ride.findById(rideId);
@@ -287,6 +320,102 @@ const createFeedback = (rideId, feedback, token) => __awaiter(void 0, void 0, vo
     yield ride.save();
     return ride;
 });
+const getActiveRide = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    let ride = null;
+    if (token.role === user_interface_1.Role.RIDER) {
+        ride = yield ride_model_1.Ride.findOne({
+            user: token.userId,
+            status: {
+                $in: [
+                    ride_interface_1.RideStatus.REQUESTED,
+                    ride_interface_1.RideStatus.ACCEPTED,
+                    ride_interface_1.RideStatus.DRIVER_ARRIVED,
+                    ride_interface_1.RideStatus.GOING_TO_PICK_UP,
+                    ride_interface_1.RideStatus.IN_TRANSIT,
+                    ride_interface_1.RideStatus.REACHED_DESTINATION,
+                    ride_interface_1.RideStatus.PENDING
+                ]
+            }
+        }).populate('driver').populate('user');
+    }
+    if (token.role === user_interface_1.Role.DRIVER) {
+        const driver = yield driver_model_1.Driver.findOne({ user: token.userId });
+        if (!driver) {
+            throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
+        }
+        ride = yield ride_model_1.Ride.findOne({
+            driver: driver._id,
+            status: {
+                $in: [
+                    ride_interface_1.RideStatus.ACCEPTED,
+                    ride_interface_1.RideStatus.DRIVER_ARRIVED,
+                    ride_interface_1.RideStatus.GOING_TO_PICK_UP,
+                    ride_interface_1.RideStatus.IN_TRANSIT,
+                    ride_interface_1.RideStatus.REACHED_DESTINATION,
+                ]
+            }
+        }).populate('driver').populate('user');
+    }
+    if (!ride) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "No active ride found");
+    }
+    //  Handle vehicle data safely
+    let vehicleData = null;
+    try {
+        if (ride.vehicle) {
+            const vehicle = yield vehicle_model_1.Vehicle.findById(ride.vehicle);
+            if (vehicle) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const _a = vehicle.toObject(), { user, _id } = _a, vehicleInfo = __rest(_a, ["user", "_id"]);
+                vehicleData = vehicleInfo;
+            }
+        }
+    }
+    catch (error) {
+        console.error('Error fetching vehicle data:', error);
+        // Continue without vehicle data rather than failing
+    }
+    return Object.assign(Object.assign({}, ride.toObject()), { vehicle: vehicleData // Will be null if no vehicle or vehicle not found
+     });
+});
+const getApproximateFare = (pickupLocation, dropOffLocation) => __awaiter(void 0, void 0, void 0, function* () {
+    const fare = yield (0, fareCalculation_1.calculateApproxFareWithSurge)(pickupLocation, dropOffLocation);
+    return fare;
+});
+const getTotalRidesCount = (userId, token) => __awaiter(void 0, void 0, void 0, function* () {
+    if (userId !== token.userId && token.role !== user_interface_1.Role.ADMIN) {
+        throw new AppError_1.default(http_status_codes_1.default.UNAUTHORIZED, "You are not authorized to view this ride count");
+    }
+    if (token.role === user_interface_1.Role.RIDER) {
+        const totalRides = yield ride_model_1.Ride.countDocuments({ user: userId, status: ride_interface_1.RideStatus.COMPLETED });
+        const cancelledRides = yield ride_model_1.Ride.countDocuments({ user: userId, status: { $in: [ride_interface_1.RideStatus.CANCELLED_BY_RIDER, ride_interface_1.RideStatus.CANCELLED_BY_DRIVER, ride_interface_1.RideStatus.CANCELLED_BY_ADMIN, ride_interface_1.RideStatus.CANCELLED_FOR_PENDING_TIME_OVER] } });
+        return { totalRides, cancelledRides };
+    }
+    else if (token.role === user_interface_1.Role.DRIVER) {
+        const driver = yield driver_model_1.Driver.findOne({ user: userId });
+        if (!driver) {
+            throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You are not registered as a driver");
+        }
+        const totalRides = yield ride_model_1.Ride.countDocuments({ driver: driver._id, status: ride_interface_1.RideStatus.COMPLETED });
+        const cancelledRides = yield ride_model_1.Ride.countDocuments({ driver: driver._id, status: { $in: [ride_interface_1.RideStatus.CANCELLED_BY_RIDER, ride_interface_1.RideStatus.CANCELLED_BY_DRIVER, ride_interface_1.RideStatus.CANCELLED_BY_ADMIN, ride_interface_1.RideStatus.CANCELLED_FOR_PENDING_TIME_OVER] } });
+        return { totalRides, cancelledRides };
+    }
+    throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "Invalid user role for ride count");
+});
+const getIncomingRideRequests = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    const driver = yield driver_model_1.Driver.findOne({ user: token.userId });
+    if (!driver) {
+        throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "Driver not found");
+    }
+    if (driver.status === driver_interface_1.DriverStatus.ON_TRIP && driver.activeRide) {
+        throw new AppError_1.default(http_status_codes_1.default.BAD_REQUEST, "You have an active ride. Please complete or cancel the current ride before fetching active ride.");
+    }
+    const incomingRides = yield ride_model_1.Ride.find({
+        driver: driver._id,
+        status: ride_interface_1.RideStatus.REQUESTED
+    }).populate('user').populate('vehicle');
+    return incomingRides;
+});
 exports.RideService = {
     createRide,
     rideStatusChangeAfterRideAccepted,
@@ -296,5 +425,9 @@ exports.RideService = {
     getAllRides,
     rejectRide,
     acceptRide,
-    createFeedback
+    createFeedback,
+    getActiveRide,
+    getApproximateFare,
+    getTotalRidesCount,
+    getIncomingRideRequests
 };

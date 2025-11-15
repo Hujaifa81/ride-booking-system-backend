@@ -16,4 +16,9 @@ router.patch("/location", (0, validateRequest_1.validateRequest)(driver_validati
 router.get("/earnings-history/:driverId", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER, user_interface_1.Role.ADMIN), driver_controller_1.driverController.getDriverEarningsHistory);
 router.patch("/is-suspended/:driverId", (0, checkAuth_1.checkAuth)(user_interface_1.Role.ADMIN), driver_controller_1.driverController.driverSuspendedStatusChange);
 router.patch("/rating/:driverId", (0, validateRequest_1.validateRequest)(driver_validation_1.driverRatingZodSchema), (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER), driver_controller_1.driverController.updateDriverRating);
+router.get("/my-driver-profile", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER, user_interface_1.Role.RIDER), driver_controller_1.driverController.getMyDriverProfile);
+router.get("/dashboard-metrics", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.driverController.getDriverDashboardMetrics);
+router.get("/earnings-analytics", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.driverController.getDriverEarningsAnalytics);
+router.get("/peak-earning-hours", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.driverController.getDriverPeakEarningHours);
+router.get("/top-earning-routes", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), driver_controller_1.driverController.getDriverTopEarningRoutes);
 exports.driverRoutes = router;

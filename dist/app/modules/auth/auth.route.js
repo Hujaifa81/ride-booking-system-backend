@@ -28,6 +28,6 @@ router.get("/google/callback", passport_1.default.authenticate("google", {
 }), auth_controller_1.authController.googleCallback);
 router.post('/login', auth_controller_1.authController.credentialsLogin);
 router.post('/logout', auth_controller_1.authController.logout);
-router.post('/reset-password', (0, checkAuth_1.checkAuth)(...Object.values(user_interface_1.Role)), auth_controller_1.authController.resetPassword);
+router.patch('/reset-password', (0, checkAuth_1.checkAuth)(...Object.values(user_interface_1.Role)), auth_controller_1.authController.resetPassword);
 router.post('/refresh-token', auth_controller_1.authController.getNewAccessToken);
 exports.authRoutes = router;

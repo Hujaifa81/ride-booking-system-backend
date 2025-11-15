@@ -17,4 +17,8 @@ router.get("/history/:userId", (0, checkAuth_1.checkAuth)(...Object.values(user_
 router.patch("/reject/:rideId", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), ride_controller_1.RideController.rejectRide);
 router.patch("/accept/:rideId", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), ride_controller_1.RideController.acceptRide);
 router.post("/feedback/:rideId", (0, validateRequest_1.validateRequest)(ride_validation_1.createFeedbackZodSchema), (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER), ride_controller_1.RideController.createFeedback);
+router.get("/active-ride", (0, checkAuth_1.checkAuth)(user_interface_1.Role.RIDER, user_interface_1.Role.DRIVER), ride_controller_1.RideController.getActiveRide);
+router.get("/approximate-fare", (0, checkAuth_1.checkAuth)(...Object.values(user_interface_1.Role)), ride_controller_1.RideController.getApproximateFare);
+router.get("/total-rides/:userId", (0, checkAuth_1.checkAuth)(...Object.values(user_interface_1.Role)), ride_controller_1.RideController.getTotalRidesCount);
+router.get("/incoming-requests", (0, checkAuth_1.checkAuth)(user_interface_1.Role.DRIVER), ride_controller_1.RideController.getIncomingRideRequests);
 exports.rideRoutes = router;
