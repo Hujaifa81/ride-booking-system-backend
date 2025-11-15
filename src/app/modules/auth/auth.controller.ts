@@ -22,6 +22,16 @@ const googleCallback = catchAsync(async (req: Request, res: Response, next: Next
     if (!user) {
         throw new AppError(httpStatus.NOT_FOUND, "User not found");
     }
+    // Clear any existing cookies before setting new ones
+    const cookieOptions = {
+        httpOnly: true,
+        secure: envVars.NODE_ENV === 'production',
+        sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
+    } as const;
+
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
     const tokenInfo = createUserToken(user);
     setCookie(res, tokenInfo);
     res.redirect(`${envVars.FRONTEND_URL}/${redirectUrl}`);
