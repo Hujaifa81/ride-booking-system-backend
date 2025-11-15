@@ -27,7 +27,7 @@ app.use(expressSession({
         secure: envVars.NODE_ENV === 'production', // CHANGED: use envVars instead of process.env
         httpOnly: true,
         sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax', // CHANGED: use envVars
-        maxAge: 24 * 60 * 60 * 1000, // UNCOMMENTED: 24 hours
+        maxAge: 7 * 24 * 60 * 60 * 1000, // UNCOMMENTED: 24 hours
         domain: envVars.NODE_ENV === 'production' ? undefined : 'localhost' // ADDED: domain setting
     },
     proxy: envVars.NODE_ENV === 'production' // ADDED: trust proxy in production
