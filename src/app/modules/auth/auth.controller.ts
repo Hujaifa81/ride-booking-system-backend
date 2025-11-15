@@ -56,25 +56,48 @@ const credentialsLogin=catchAsync(async (req: Request, res: Response, next: Next
 })
 
 const logout = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    res.clearCookie("accessToken", {
+    // Clear cookies with ALL possible domain/path combinations
+    const cookieOptions = {
         httpOnly: true,
-        secure: envVars.NODE_ENV === 'production' ? true : false,
+        secure: envVars.NODE_ENV === 'production',
         sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax',
-       
-    });
-    res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: envVars.NODE_ENV === 'production'? true : false,
-        sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax',
-        
-    });
+        path: '/',
+    } as const;
+
+    // Clear access token
+    res.clearCookie("accessToken", cookieOptions);
+    
+    // Clear refresh token
+    res.clearCookie("refreshToken", cookieOptions);
+    
+    // Clear session cookie if it exists
+    res.clearCookie("connect.sid", cookieOptions);
+    
+    // Destroy express session
+    if (req.session) {
+        req.session.destroy((err) => {
+            if (err) {
+                console.error("Session destroy error:", err);
+            }
+        });
+    }
+    
+    // Logout from passport
+    if (req.logout) {
+        req.logout((err) => {
+            if (err) {
+                console.error("Passport logout error:", err);
+            }
+        });
+    }
+
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
         message: "Logout successful",
         data: null
-    })
-})
+    });
+});
 
 const resetPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const newPassword = req.body.newPassword;
