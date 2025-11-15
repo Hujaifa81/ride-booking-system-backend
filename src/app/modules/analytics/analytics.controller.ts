@@ -1,22 +1,27 @@
 import { Request, Response } from "express";
 import { Analytics } from "./analytics.service";
+import { sendResponse } from "../../utils/sendResponse";
+import httpStatus from "http-status-codes";
 
 const getDashboardSummary = async (req: Request, res: Response) => {
-    const { from, to, driverId, userId } = req.query as { 
-        from?: string; 
-        to?: string; 
-        driverId?: string;
-        userId?: string;
-    };
-    const data = await Analytics.getKpis({ from, to, driverId, userId });
-    res.json(data);
+    const filteredDate = req.query as {
+        from?: string;
+        to?: string;
+    }
+    const summary = await Analytics.getDashboardSummary(filteredDate);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Dashboard summary fetched successfully",
+        success: true,
+        data: summary
+    });
 };
 
 const getRideTrends = async (req: Request, res: Response) => {
-    const { from, to, granularity, driverId, userId } = req.query as { 
-        from?: string; 
-        to?: string; 
-        granularity?: "day" | "month"; 
+    const { from, to, granularity, driverId, userId } = req.query as {
+        from?: string;
+        to?: string;
+        granularity?: "day" | "month";
         driverId?: string;
         userId?: string;
     };
@@ -25,10 +30,10 @@ const getRideTrends = async (req: Request, res: Response) => {
 };
 
 const getRevenueTrends = async (req: Request, res: Response) => {
-    const { from, to, granularity, driverId, userId } = req.query as { 
-        from?: string; 
-        to?: string; 
-        granularity?: "day" | "month"; 
+    const { from, to, granularity, driverId, userId } = req.query as {
+        from?: string;
+        to?: string;
+        granularity?: "day" | "month";
         driverId?: string;
         userId?: string;
     };
@@ -37,10 +42,10 @@ const getRevenueTrends = async (req: Request, res: Response) => {
 };
 
 const getTopDriversCtrl = async (req: Request, res: Response) => {
-    const { from, to, limit, userId } = req.query as { 
-        from?: string; 
-        to?: string; 
-        limit?: string; 
+    const { from, to, limit, userId } = req.query as {
+        from?: string;
+        to?: string;
+        limit?: string;
         userId?: string;
     };
     const data = await Analytics.getTopDrivers({ from, to, userId }, limit ? Number(limit) : 10);
@@ -48,10 +53,10 @@ const getTopDriversCtrl = async (req: Request, res: Response) => {
 };
 
 const getTopRidersCtrl = async (req: Request, res: Response) => {
-    const { from, to, limit, driverId } = req.query as { 
-        from?: string; 
-        to?: string; 
-        limit?: string; 
+    const { from, to, limit, driverId } = req.query as {
+        from?: string;
+        to?: string;
+        limit?: string;
         driverId?: string;
     };
     const data = await Analytics.getTopRiders({ from, to, driverId }, limit ? Number(limit) : 10);
@@ -59,9 +64,9 @@ const getTopRidersCtrl = async (req: Request, res: Response) => {
 };
 
 const getCancellationBreakdownCtrl = async (req: Request, res: Response) => {
-    const { from, to, driverId, userId } = req.query as { 
-        from?: string; 
-        to?: string; 
+    const { from, to, driverId, userId } = req.query as {
+        from?: string;
+        to?: string;
         driverId?: string;
         userId?: string;
     };
@@ -70,9 +75,9 @@ const getCancellationBreakdownCtrl = async (req: Request, res: Response) => {
 };
 
 const getFunnelCtrl = async (req: Request, res: Response) => {
-    const { from, to, driverId, userId } = req.query as { 
-        from?: string; 
-        to?: string; 
+    const { from, to, driverId, userId } = req.query as {
+        from?: string;
+        to?: string;
         driverId?: string;
         userId?: string;
     };

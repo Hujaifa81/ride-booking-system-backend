@@ -24,7 +24,7 @@ app.use(expressSession({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: envVars.NODE_ENV === 'production', // CHANGED: use envVars instead of process.env
+        secure: envVars.NODE_ENV === 'production' ? true : false, 
         httpOnly: true,
         sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax', // CHANGED: use envVars
         maxAge: 7 * 24 * 60 * 60 * 1000, // UNCOMMENTED: 24 hours

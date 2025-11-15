@@ -58,13 +58,13 @@ const credentialsLogin=catchAsync(async (req: Request, res: Response, next: Next
 const logout = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     res.clearCookie("accessToken", {
         httpOnly: true,
-        secure: envVars.NODE_ENV === 'production',
+        secure: envVars.NODE_ENV === 'production' ? true : false,
         sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax',
        
     });
     res.clearCookie("refreshToken", {
         httpOnly: true,
-        secure: envVars.NODE_ENV === 'production',
+        secure: envVars.NODE_ENV === 'production'? true : false,
         sameSite: envVars.NODE_ENV === 'production' ? 'none' : 'lax',
         
     });
