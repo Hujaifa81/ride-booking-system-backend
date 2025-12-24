@@ -154,9 +154,9 @@ Complete ride workflow with status transitions:
 
 ### 💵 Dynamic Fare Calculation
 - **Base Components**:
-  - Base fare: ₹50
-  - Per kilometer: ₹25
-  - Per minute: ₹5 (estimated at 40 km/h average speed)
+  - Base fare: 50
+  - Per kilometer: 25
+  - Per minute: 5 (estimated at 40 km/h average speed)
   
 - **Surge Pricing**:
   - Demand-based surge: Calculated from active rides vs available drivers ratio
@@ -407,7 +407,7 @@ Most listing endpoints support:
    FRONTEND_URL=http://localhost:3000
    
    # Password Hashing
-   SALT_ROUND=10
+   SALT_ROUND=round number
    ```
 
 4. **Start the development server**
@@ -737,7 +737,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **⭐ Star this repo if you find it helpful!**
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by [Md Abu Hujaifa]
 
 </div>
 
