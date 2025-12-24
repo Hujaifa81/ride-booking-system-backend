@@ -17,6 +17,21 @@ const getDashboardSummary = async (req: Request, res: Response) => {
     });
 };
 
+const getAdminAnalytics= async (req: Request, res: Response) => {
+    const { from, to, metric } = req.query as {
+        from?: string;
+        to?: string;
+        metric?: "rides" | "revenue" | "drivers" | "riders" | "users";
+    };
+    const data = await Analytics.getAdvancedAnalytics(from, to , metric ?? "rides");
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        message: "Admin analytics fetched successfully",
+        success: true,
+        data: data
+    });
+};
+
 const getRideTrends = async (req: Request, res: Response) => {
     const { from, to, granularity, driverId, userId } = req.query as {
         from?: string;
@@ -92,5 +107,6 @@ export const analyticsController = {
     getTopDriversCtrl,
     getTopRidersCtrl,
     getCancellationBreakdownCtrl,
-    getFunnelCtrl
+    getFunnelCtrl,
+    getAdminAnalytics
 };

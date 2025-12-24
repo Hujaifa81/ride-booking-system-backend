@@ -1,157 +1,744 @@
-# 📄 README.md
+# � Ride Booking Backend
 
 [🌐 Live API Deployment](https://ride-booking-backend-six.vercel.app)
+## 📋 Table of Contents
+- [Project Overview](#-project-overview)
+- [Key Features](#-key-features)
+- [Business Logic & Rules](#-business-logic--rules)
+- [Roles & Permissions](#-roles--permissions)
+- [Tech Stack](#️-tech-stack)
+- [API Endpoints](#-api-endpoints)
+- [Getting Started](#-getting-started)
+- [Architecture & Design Patterns](#️-architecture--design-patterns)
+- [Security Features](#-security-features)
+- [Deployment](#-deployment)
+- [Performance Optimizations](#-performance-optimizations)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
+- [Future Enhancements](#-future-enhancements)
+- [License](#-license)
 
-## Project Overview
+---
+## 📋 Project Overview
 
-Ride Booking Backend is a scalable Node.js/Express backend for a ride-hailing platform. It manages user authentication, driver and vehicle management, ride requests, analytics, and real-time driver matching using MongoDB geospatial queries. The backend is designed for reliability, extensibility, and production deployment.
+A production-ready, scalable Node.js/Express TypeScript backend for a comprehensive ride-hailing platform. This system manages user authentication, driver/vehicle management, real-time ride requests, intelligent driver matching, automated job scheduling, analytics, and reporting with MongoDB geospatial queries and Socket.IO real-time communication.
 
-> **Distance Calculation:** This project uses the Haversine formula to calculate the distance (in kilometers) between two geographic coordinates (latitude/longitude) for accurate fare and driver matching logic.
+The backend is designed with enterprise-grade architecture featuring modular design patterns, role-based access control, automated business logic handling, and comprehensive error management for reliable production deployment.
 
-## Features
-- User authentication (JWT, Passport)
-- Role-based access control (Admin, Rider, Driver) for secure and organized API access
-- Modular, service-based architecture
-- Rider, Driver and vehicle management
-- Ride request, matching, and status tracking
-- Ride status updates and full status history tracking for every ride
-- Geospatial queries for nearest driver search
-- Analytics and reporting (PDF,CSV and Excel export)
-- Admin controls and driver approval
-- Error handling and validation (Zod, Mongoose)
-- Organized and consistent error responses for all API endpoints, including detailed error messages and validation feedback
-- Job scheduling (Agenda)
-- Automatic ride cancellation if no drivers are available within 10 minutes
-- Drivers can accept or reject ride requests
-- Drivers have 5 minutes to respond to a ride request
-- Maximum cancellation policy and ride cancellation tracking
-- Fare calculation with surge pricing and distance-based rates
-- If a ride takes longer than the expected time, the fare is increased by a per-minute penalty
-- Drivers earn 75% of the final fare (including any penalties)
-- Riders  can rate  and leave feedback after each ride
-- System finds the nearest available driver within a 5 km radius when a ride request is made
-- Advanced search, filter, sorting and pagination for listing rides, drivers, and vehicles
-- Search drivers based on location and show all drivers within a 5 km radius
-- Riders and drivers can manually cancel a ride within the allowed cancellation window
+> **Distance Calculation:** Uses the Haversine formula to calculate accurate distances (in kilometers) between geographic coordinates (latitude/longitude) for precise fare calculations and driver matching logic.
 
-## Business Logic
+## ✨ Key Features
 
-- **Auto-Cancellation:**
-  - If no drivers are available for a ride request, the ride is automatically cancelled after 10 minutes.
-  - If a driver or user does not respond to a ride request within the specified timeframe, the ride is automatically cancelled by the system.
-- **Manual Ride Cancellation:**
-  - Riders and drivers can manually cancel a ride within the allowed cancellation window (e.g., before the driver arrives or before the ride starts).
-- **Driver Response Window:**
-  - When a ride request is sent to a driver, the driver has 5 minutes to accept or reject the request. If there is no response within 5 minutes, the request is considered pending and may be reassigned or cancelled.
-- **Driver Actions:**
-  - Drivers can accept or reject ride requests directly from their or dashboard.
-- **Cancellation Policy:**
-  - The system tracks the number of cancellations per user and driver in a day.3 cancellation per day rider or driver will be blocked for 24 hours by system.
-- **Fare Calculation:**
-  - Fare is calculated based on distance, time, and include surge pricing during peak demand.If a ride takes longer than the expected time, the fare is increased by a per-minute penalty.
-- **Nearest Driver Matching:**
-  - When a ride request is made, the system automatically searches for the nearest available driver within a 5 km radius of the pickup location.
-- **Search, Filter, Sort & Pagination:**
-  - All major listing endpoints (rides, drivers, vehicles, riders) support advanced search, filtering, sorting and pagination for efficient data retrieval and management.
-- **Location-Based Driver Search:**
-  - The system allows searching for drivers based on a specific location and returns all available drivers within a 5 km radius of that point.
-- **Ride Status & History:**
-  - Every ride maintains a status (e.g., requested, accepted, going to pickup, driver arrived,in transit,reached the destination, completed, cancelled).
-  - All status changes are recorded in a status history log with timestamps and the actor (rider/driver/system) who made the change.
-  - The system provides endpoints to update the ride status and to retrieve the full status history for auditing and transparency.
-- **Rating & Feedback:**
-  - After each completed ride, riders can rate each other and provide feedback. Ratings contribute to user and driver reputation and may affect future matching.
+### 🔐 Authentication & Authorization
+- JWT-based authentication with access and refresh tokens
+- Google OAuth 2.0 integration using Passport.js
+- Session management with secure cookie handling
+- Role-based access control (RBAC) - Admin, Rider, Driver
+- Secure password hashing with bcrypt
 
-## Roles & Permissions
+### 👥 User Management
+- User registration and profile management
+- Phone number verification requirement for ride requests
+- User activity tracking and suspension capabilities
+- Soft delete functionality
+- User blocking system for policy violations
 
-This backend implements role-based access control (RBAC) with the following roles:
+### 🚗 Driver & Vehicle Management
+- Driver registration with approval workflow
+- Real-time driver location tracking using geospatial indexing
+- Driver availability status management
+- Vehicle registration with activation/deactivation
+- Driver earnings history tracking
+- Driver rating and reputation system
+- Driver suspension controls for admins
+- Active ride tracking per driver
 
-- **Admin**: Full access to all resources, analytics, reports, user/driver management, and system settings.
-- **Rider**: Can register, request rides, view ride history, rate drivers, provide feedback, and manage their own profile.
-- **Driver**: Can register, update location and availability, accept/reject/cancel rides, view earnings, and receive ratings/feedback.
+### 🧭 Intelligent Ride Management
+- Real-time ride request creation and matching
+- Automatic nearest driver search within 5 km radius using MongoDB 2dsphere indexing
+- Driver assignment with 5-minute response window
+- Automated driver timeout and re-assignment logic
+- Multi-status ride lifecycle (Requested → Accepted → Going to Pickup → Driver Arrived → In Transit → Reached Destination → Completed)
+- Complete status history tracking with timestamps and actors (rider/driver/system)
+- Ride rejection handling with driver blacklist per ride
+- Manual and automatic ride cancellation with reasons
+- Cancellation policy enforcement (max 3 per day, 24-hour suspension)
+- Real-time status updates via Socket.IO
 
-> Most API endpoints are protected and require authentication. Access is granted based on the user's assigned role(s). See each endpoint for required roles.
+### 💰 Advanced Fare Calculation
+- Dynamic fare calculation based on distance and estimated time
+- Real-time surge pricing based on demand-to-supply ratio
+- Time-based surge multipliers (peak hours, weekends, holidays)
+- Penalty fare for rides exceeding expected duration
+- Base fare + per kilometer + per minute pricing model
+- Driver earnings: 75% of final fare (including penalties)
+- Approximate fare display before ride confirmation
 
-## Tech Stack
-- **Node.js** (Express.js)
-- **TypeScript**
-- **MongoDB** (Mongoose, 2dsphere geospatial index)
-- **Zod** (validation)
-- **Passport.js** (authentication)
-- **Agenda** (job scheduling)
-- **PDF**, **json2csv**, **exceljs** (reporting)
-- **Vercel** (deployment)
+### ⏰ Automated Job Scheduling (Agenda)
+- Automatic ride cancellation after 10 minutes if no driver available
+- Driver response timeout monitoring (5 minutes)
+- Periodic pending ride check and driver reassignment (every 30 seconds)
+- Background job processing for system reliability
 
-## API Endpoints
+### 📊 Analytics & Reporting
+- Real-time dashboard summary with key metrics
+- Ride trends analysis (daily, weekly, monthly)
+- Revenue trends tracking
+- Top drivers and riders leaderboards
+- Cancellation breakdown by type (rider/driver/system)
+- Conversion funnel analysis
+- KPI reporting (total rides, revenue, active users/drivers)
+- Export reports in PDF, CSV, and Excel formats
 
-### Auth
-- `GET /api/v1/auth/google`
-- `GET /api/v1/auth/google/callback`
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/logout`
-- `POST /api/v1/auth/reset-password`
-- `POST /api/v1/auth/refresh-token`
+### 🌐 Real-Time Communication (Socket.IO)
+- Real-time ride request notifications to drivers
+- Live ride status updates to riders and drivers
+- Driver timeout and cancellation notifications
+- Automatic driver reconnection handling
+- User connection tracking
 
-### User
-- `POST /api/v1/user/register`
-- `GET /api/v1/user/all`
-- `PATCH /api/v1/user/:userId`
+### 🔍 Advanced Search & Filtering
+- Search, filter, sort, and pagination on all major endpoints
+- Location-based driver search within specified radius
+- Query builder for complex filtering operations
+- Ride history with flexible filtering options
 
-### Driver
-- `POST /api/v1/driver/create`
-- `GET /api/v1/driver/all`
-- `PATCH /api/v1/driver/approve-status/:driverId`
-- `PATCH /api/v1/driver/availability-status`
-- `PATCH /api/v1/driver/location`
-- `GET /api/v1/driver/earnings-history/:driverId`
-- `PATCH /api/v1/driver/is-suspended/:driverId`
-- `PATCH /api/v1/driver/rating/:driverId`
+### 🛡️ Security & Error Handling
+- Comprehensive error handling with custom error classes
+- MongoDB validation error handling
+- Zod schema validation with detailed error messages
+- Cast error and duplicate key error handlers
+- Global error middleware
+- Secure CORS configuration with credential support
+- Environment-specific security settings (production/development)
+- Proxy trust configuration for deployment platforms
 
-### Vehicle
-- `POST /api/v1/vehicle/create`
-- `PATCH /api/v1/vehicle/active/:vehicleId`
+## 🎯 Business Logic & Rules
 
-### Ride
-- `POST /api/v1/ride/create`
-- `PATCH /api/v1/ride/status-change/:rideId`
-- `PATCH /api/v1/ride/cancel/:rideId`
-- `GET /api/v1/ride/all`
-- `GET /api/v1/ride/single-ride/:rideId`
-- `GET /api/v1/ride/history/:userId`
-- `PATCH /api/v1/ride/reject/:rideId`
-- `PATCH /api/v1/ride/accept/:rideId`
-- `POST /api/v1/ride/feedback/:rideId`
+### 🚫 Automatic Ride Cancellation
+- **No Driver Available**: Rides automatically cancelled after 10 minutes if no driver found
+- **Driver Timeout**: If driver doesn't respond within 5 minutes, ride reassigned to next nearest driver
+- **Pending Ride Retry**: System retries driver assignment every 30 seconds for pending rides
+- **Complete Workflow**: Requested → Pending (if no driver) → Auto-cancel (after 10 min) OR Reassign to new driver
 
-### Report
-- `GET /api/v1/report/kpi`
-- `GET /api/v1/report/top-drivers`
-- `GET /api/v1/report/top-riders`
-- `GET /api/v1/report/full-analytics`
+### 👤 Manual Ride Cancellation
+- **Rider Cancellation**: Can cancel before driver arrives or ride starts
+- **Driver Cancellation**: Can cancel accepted rides with valid reason
+- **Cancellation Tracking**: All cancellations recorded in status history with timestamp and reason
+- **Policy Enforcement**: Both riders and drivers tracked separately
 
-### Analytics
-- `GET /api/v1/analytics/dashboard-summary`
-- `GET /api/v1/analytics/ride-trends`
-- `GET /api/v1/analytics/revenue-trends`
-- `GET /api/v1/analytics/top-drivers`
-- `GET /api/v1/analytics/top-riders`
-- `GET /api/v1/analytics/cancellation-breakdown`
-- `GET /api/v1/analytics/funnel`
+### ⏱️ Driver Response Management
+- **Response Window**: 5 minutes to accept or reject ride request
+- **Timeout Action**: Automatic reassignment to next available driver
+- **Notification System**: Real-time Socket.IO notifications for new requests
+- **Request Tracking**: Driver added to rejected list for that specific ride
+
+### 🚦 Ride Status Lifecycle
+Complete ride workflow with status transitions:
+1. **REQUESTED** - Initial ride creation
+2. **PENDING** - No driver available, system searching
+3. **ACCEPTED** - Driver accepted the ride
+4. **GOING_TO_PICK_UP** - Driver en route to pickup location
+5. **DRIVER_ARRIVED** - Driver reached pickup point
+6. **IN_TRANSIT** - Ride in progress
+7. **REACHED_DESTINATION** - Arrived at drop-off location
+8. **COMPLETED** - Ride finished, payment processed
+9. **CANCELLED_BY_RIDER** / **CANCELLED_BY_DRIVER** / **CANCELLED_BY_SYSTEM** - Various cancellation states
+
+### 📵 Cancellation Policy & User Blocking
+- **Daily Limit**: Maximum 3 cancellations per day per user/driver
+- **Automatic Block**: System blocks user/driver for 24 hours after reaching limit
+- **New Request Restriction**: Cannot request new rides after reaching cancellation limit
+- **Reset**: Counter resets at midnight daily
+- **Tracking Window**: Counts cancellations from 00:00 to 23:59 each day
+
+### 💵 Dynamic Fare Calculation
+- **Base Components**:
+  - Base fare: ₹50
+  - Per kilometer: ₹25
+  - Per minute: ₹5 (estimated at 40 km/h average speed)
+  
+- **Surge Pricing**:
+  - Demand-based surge: Calculated from active rides vs available drivers ratio
+  - Time-based surge: Peak hours (7-10 AM, 5-8 PM), weekends, holidays
+  - Combined multiplier: (1 + demandSurge) × (1 + timeSurge)
+  
+- **Penalty System**:
+  - Triggered if ride duration exceeds expected time
+  - Expected time calculated: (distance / 40 km/h) × 60 minutes
+  - Penalty rate: ₹10 per extra minute
+  - Added to final fare
+
+- **Driver Earnings**: 75% of total fare (including penalties)
+- **Display**: Approximate fare shown before ride confirmation
+
+### 🔍 Nearest Driver Matching Algorithm
+1. Search drivers within 5 km radius of pickup location
+2. Filter by: Available status, Approved, No active ride, Not suspended, Active user account
+3. Exclude: Drivers who previously rejected this ride
+4. Sort by: Distance from pickup (nearest first)
+5. Return: Closest matching driver
+6. If none found: Set ride to PENDING, retry every 30 seconds
+
+### 📊 Location-Based Features
+- **Driver Search Radius**: 5 km maximum
+- **Geospatial Indexing**: MongoDB 2dsphere for efficient location queries
+- **Real-time Updates**: Drivers can update location anytime
+- **Pickup Validation**: Prevents same pickup and drop-off locations
+
+### ⭐ Rating & Feedback System
+- **Post-Ride Only**: Ratings allowed after ride completion
+- **Mutual Ratings**: Riders rate drivers (future feature: drivers rate riders)
+- **Feedback Storage**: Comments and ratings stored with ride
+- **Reputation Impact**: Affects driver visibility and matching priority
+
+### 🔐 Pre-Ride Validations
+- **Phone Verification**: Riders must have phone number in profile
+- **Active Ride Check**: Users cannot have multiple concurrent rides
+- **Daily Cancellation Check**: Blocks requests if limit reached
+- **Location Validation**: Ensures valid pickup/drop-off coordinates
+- **Driver Availability**: Only approved, non-suspended, available drivers matched
+
+## 👥 Roles & Permissions
+
+The system implements comprehensive role-based access control (RBAC):
+
+### 🔴 Admin
+- Full system access and control
+- User and driver management (approve, suspend, delete)
+- Access to all analytics and reports
+- View all rides and transactions
+- System configuration and monitoring
+- Driver approval workflow management
+
+### 🟢 Rider
+- Register and manage profile
+- Request and track rides
+- View ride history and receipts
+- Rate drivers and provide feedback
+- Cancel rides (within policy limits)
+- View approximate fare before booking
+
+### 🔵 Driver
+- Register with vehicle information
+- Update real-time location and availability
+- Receive and respond to ride requests (accept/reject)
+- Navigate through ride lifecycle
+- View earnings history and breakdown
+- Receive ratings and feedback
+- Cancel accepted rides (with valid reason)
+
+> 🔒 **Note**: Most endpoints are protected and require authentication. Access is granted based on JWT token validation and assigned role(s).
+
+## 🛠️ Tech Stack
+
+### Core Technologies
+- **Runtime**: Node.js 18.x
+- **Framework**: Express.js 5.x
+- **Language**: TypeScript 5.x
+- **Database**: MongoDB with Mongoose ODM
+
+### Authentication & Security
+- **JWT**: jsonwebtoken (access & refresh tokens)
+- **OAuth**: Passport.js with Google OAuth 2.0
+- **Password Hashing**: bcryptjs
+- **Session Management**: express-session with secure cookies
+- **Validation**: Zod 4.x for schema validation
+
+### Real-Time & Background Jobs
+- **WebSocket**: Socket.IO 4.x for real-time communication
+- **Job Scheduling**: Agenda 5.x for background tasks
+- **HTTP Server**: Node.js HTTP module
+
+### Reporting & Data Export
+- **PDF Generation**: PDFKit
+- **CSV Export**: json2csv
+- **Excel Export**: ExcelJS
+
+### Geospatial & Utilities
+- **Geospatial Queries**: MongoDB 2dsphere indexing
+- **HTTP Status**: http-status-codes package
+- **CORS**: cors middleware
+- **Cookie Parsing**: cookie-parser
+
+### Development Tools
+- **TypeScript Compiler**: tsc
+- **Linting**: ESLint 9.x with TypeScript ESLint
+- **Dev Server**: ts-node-dev with auto-reload
+- **Environment**: dotenv for configuration
+
+### Deployment
+- **Platform**: Vercel (serverless)
+- **Proxy Handling**: Configured for Railway/Vercel
+- **Production Ready**: Environment-based configuration
+
+## 🔌 API Endpoints
+
+### 🔐 Authentication (`/api/v1/auth`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/google` | Initiate Google OAuth login | No |
+| GET | `/google/callback` | Google OAuth callback handler | No |
+| POST | `/login` | Email/password login | No |
+| POST | `/logout` | Logout and clear session | Yes |
+| POST | `/reset-password` | Reset user password | Yes |
+| POST | `/refresh-token` | Generate new access token | Yes |
+
+### 👤 User Management (`/api/v1/user`)
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| POST | `/register` | Register new user (rider) | No | - |
+| GET | `/all` | Get all users with filters | Yes | Admin |
+| PATCH | `/:userId` | Update user profile | Yes | Admin, User |
+
+### 🚗 Driver Management (`/api/v1/driver`)
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| POST | `/create` | Register new driver | Yes | - |
+| GET | `/all` | Get all drivers with filters | Yes | Admin |
+| PATCH | `/approve-status/:driverId` | Approve/reject driver | Yes | Admin |
+| PATCH | `/availability-status` | Update driver availability | Yes | Driver |
+| PATCH | `/location` | Update driver location | Yes | Driver |
+| GET | `/earnings-history/:driverId` | Get driver earnings | Yes | Admin, Driver |
+| PATCH | `/is-suspended/:driverId` | Suspend/unsuspend driver | Yes | Admin |
+| PATCH | `/rating/:driverId` | Update driver rating | Yes | Rider |
+
+### 🚙 Vehicle Management (`/api/v1/vehicle`)
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| POST | `/create` | Register new vehicle | Yes | Driver |
+| PATCH | `/active/:vehicleId` | Activate/deactivate vehicle | Yes | Driver |
+
+### 🚕 Ride Management (`/api/v1/ride`)
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| POST | `/create` | Create new ride request | Yes | Rider |
+| PATCH | `/status-change/:rideId` | Update ride status | Yes | Driver |
+| PATCH | `/cancel/:rideId` | Cancel ride | Yes | Rider, Driver |
+| GET | `/all` | Get all rides with filters | Yes | Admin |
+| GET | `/single-ride/:rideId` | Get ride details | Yes | All |
+| GET | `/history/:userId` | Get user ride history | Yes | Rider, Driver |
+| PATCH | `/reject/:rideId` | Reject ride request | Yes | Driver |
+| PATCH | `/accept/:rideId` | Accept ride request | Yes | Driver |
+| POST | `/feedback/:rideId` | Submit ride feedback | Yes | Rider |
+
+### 📊 Analytics (`/api/v1/analytics`)
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| GET | `/dashboard-summary` | Get dashboard KPIs | Yes | Admin |
+| GET | `/ride-trends` | Get ride trends analysis | Yes | Admin |
+| GET | `/revenue-trends` | Get revenue analytics | Yes | Admin |
+| GET | `/top-drivers` | Get top performing drivers | Yes | Admin |
+| GET | `/top-riders` | Get most active riders | Yes | Admin |
+| GET | `/cancellation-breakdown` | Cancellation statistics | Yes | Admin |
+| GET | `/funnel` | Ride conversion funnel | Yes | Admin |
+
+### 📈 Reports (`/api/v1/report`)
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| GET | `/kpi` | Export KPI report (PDF/CSV/Excel) | Yes | Admin |
+| GET | `/top-drivers` | Export top drivers report | Yes | Admin |
+| GET | `/top-riders` | Export top riders report | Yes | Admin |
+| GET | `/full-analytics` | Export complete analytics | Yes | Admin |
+
+### 📝 Query Parameters (Common)
+Most listing endpoints support:
+- `search` - Search term
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 10)
+- `sort` - Sort field (e.g., `createdAt`, `-fare`)
+- `status` - Filter by status
+- `startDate` / `endDate` - Date range filtering
+
+### 🔄 Real-Time Events (Socket.IO)
+- `new_ride_request` - Emitted to driver when assigned
+- `ride_status_change` - Emitted on status updates
+- `ride_cancelled` - Emitted when ride cancelled
+- `driver_timeout` - Emitted when driver doesn't respond
+
+> 📌 **Note**: See source code for detailed request/response schemas and validation rules.
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js**: 18.x or higher
+- **MongoDB**: 4.4 or higher (with geospatial index support)
+- **npm** or **yarn** package manager
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/ride-booking-backend.git
+   cd ride-booking-backend
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment Setup**
+   
+   Create a `.env` file in the root directory:
+   ```env
+   # Server Configuration
+   PORT=5000
+   NODE_ENV=development
+   
+   # Database
+   DB_URL=mongodb://localhost:27017/ride-booking
+   
+   # JWT Secrets
+   JWT_ACCESS_SECRET=your-access-secret-key
+   JWT_REFRESH_SECRET=your-refresh-secret-key
+   JWT_ACCESS_EXPIRES_IN=1d
+   JWT_REFRESH_EXPIRES_IN=7d
+   
+   # Google OAuth
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   GOOGLE_CALLBACK_URL=http://localhost:5000/api/v1/auth/google/callback
+   
+   # Session
+   EXPRESS_SESSION_SECRET=your-session-secret
+   
+   # Frontend URL (for CORS)
+   FRONTEND_URL=http://localhost:3000
+   
+   # Password Hashing
+   SALT_ROUND=10
+   ```
+
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Build for production**
+   ```bash
+   npm run build
+   npm start
+   ```
+
+### 📁 Project Structure
+```
+src/
+├── app.ts                      # Express app configuration
+├── server.ts                   # Server entry point
+└── app/
+    ├── agenda/                 # Background job definitions
+    │   ├── agenda.ts
+    │   └── jobs/
+    │       └── ride.job.ts     # Ride-related jobs
+    ├── config/                 # Configuration files
+    │   ├── env.ts             # Environment variables
+    │   ├── passport.ts        # Passport strategies
+    │   └── socket.ts          # Socket.IO setup
+    ├── constants.ts           # App-wide constants
+    ├── errorHelpers/          # Custom error classes
+    ├── helpers/               # Error handling utilities
+    ├── interfaces/            # TypeScript interfaces
+    ├── middlewares/           # Express middlewares
+    │   ├── checkAuth.ts
+    │   ├── globalErrorHandler.ts
+    │   ├── notFound.ts
+    │   └── validateRequest.ts
+    ├── modules/               # Feature modules
+    │   ├── analytics/
+    │   ├── auth/
+    │   ├── driver/
+    │   ├── report/
+    │   ├── ride/
+    │   ├── user/
+    │   └── vehicle/
+    ├── routes/                # Route aggregator
+    │   └── index.ts
+    └── utils/                 # Utility functions
+        ├── catchAsync.ts
+        ├── fareCalculation.ts
+        ├── findNearestAvailableDriver.ts
+        ├── jwt.ts
+        ├── kmCalculation.ts
+        ├── queryBuilder.ts
+        ├── rideStatusChange.ts
+        ├── socket.ts
+        └── surge.ts
+```
+
+### 🗄️ Database Setup
+
+The application uses MongoDB with geospatial indexing for location-based queries. Ensure your MongoDB instance supports 2dsphere indexes.
+
+**Automatic Index Creation**: Mongoose will automatically create required indexes on first run.
+
+**Manual Index Creation** (if needed):
+```javascript
+db.drivers.createIndex({ location: "2dsphere" })
+```
+
+### 🔧 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with auto-reload |
+| `npm run build` | Compile TypeScript to JavaScript |
+| `npm start` | Start production server |
+| `npm run lint` | Run ESLint on source code |
+| `npm test` | Run tests (not yet implemented) |
+
+### 🌱 Seeding Data
+
+The application automatically seeds an admin user on first run in development mode:
+
+- **Email**: admin@example.com
+- **Password**: admin123
+- **Role**: Admin
+
+> ⚠️ **Security Note**: Change default admin credentials immediately in production!
+
+### 🧪 Testing the API
+
+You can test the API using:
+- **Postman**: Import endpoints and test with proper authentication
+- **cURL**: Command-line testing
+- **Frontend App**: Connect to the frontend application
+
+**Base URL**: 
+- Development: `http://localhost:5000/api/v1`
+- Production: `https://ride-booking-backend-six.vercel.app/api/v1`
+
+## 🏗️ Architecture & Design Patterns
+
+### Modular Architecture
+- **Service Layer Pattern**: Business logic separated from controllers
+- **Repository Pattern**: Data access abstraction through Mongoose models
+- **Middleware Pattern**: Reusable request processing pipeline
+- **Factory Pattern**: Dynamic error handler creation
+- **Strategy Pattern**: Multiple fare calculation strategies
+
+### Key Design Principles
+- **Separation of Concerns**: Clear boundaries between layers
+- **DRY (Don't Repeat Yourself)**: Reusable utilities and helpers
+- **SOLID Principles**: Single responsibility, open-closed, etc.
+- **Error-First Approach**: Comprehensive error handling at every layer
+- **Type Safety**: Full TypeScript coverage
+
+### Code Organization
+Each feature module follows this structure:
+```
+module/
+├── module.interface.ts     # TypeScript interfaces
+├── module.model.ts         # Mongoose schema & model
+├── module.validation.ts    # Zod validation schemas
+├── module.controller.ts    # Request handlers
+├── module.service.ts       # Business logic
+├── module.route.ts         # Express routes
+└── module.constants.ts     # Module-specific constants
+```
+
+## 🔒 Security Features
+
+- ✅ JWT-based authentication with access & refresh tokens
+- ✅ Password hashing with bcrypt (10 rounds)
+- ✅ Secure HTTP-only cookies
+- ✅ CORS configuration with credential support
+- ✅ Request validation using Zod schemas
+- ✅ Role-based access control (RBAC)
+- ✅ Session management with express-session
+- ✅ Environment-based security settings
+- ✅ SQL injection prevention (NoSQL database)
+- ✅ XSS protection through input validation
+- ✅ Trust proxy configuration for deployment
+
+## 🚀 Deployment
+
+### Vercel Deployment (Current)
+
+The application is deployed on Vercel with the following configuration:
+
+1. **Build Settings**:
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+   - Install Command: `npm install`
+
+2. **Environment Variables**: Configure all `.env` variables in Vercel dashboard
+
+3. **Serverless Functions**: Express app runs as serverless function
+
+### Alternative Deployment Options
+
+<details>
+<summary><b>Railway Deployment</b></summary>
+
+```bash
+# Add Railway CLI
+npm i -g @railway/cli
+
+# Login
+railway login
+
+# Initialize project
+railway init
+
+# Add environment variables
+railway variables
+
+# Deploy
+railway up
+```
+</details>
+
+<details>
+<summary><b>Heroku Deployment</b></summary>
+
+```bash
+# Login to Heroku
+heroku login
+
+# Create app
+heroku create your-app-name
+
+# Add MongoDB addon
+heroku addons:create mongolab
+
+# Set environment variables
+heroku config:set JWT_ACCESS_SECRET=your-secret
+
+# Deploy
+git push heroku main
+```
+</details>
+
+<details>
+<summary><b>Docker Deployment</b></summary>
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+```bash
+docker build -t ride-booking-backend .
+docker run -p 5000:5000 --env-file .env ride-booking-backend
+```
+</details>
+
+## 📊 Performance Optimizations
+
+- ✅ MongoDB indexing for geospatial queries (2dsphere)
+- ✅ Database query optimization with projections
+- ✅ Pagination for large datasets
+- ✅ Lean queries for read-only operations
+- ✅ Connection pooling with Mongoose
+- ✅ Background job processing with Agenda
+- ✅ Efficient driver matching algorithm
+- ✅ Caching strategies (future: Redis integration)
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**1. MongoDB Connection Error**
+```
+Error: connect ECONNREFUSED 127.0.0.1:27017
+```
+**Solution**: Ensure MongoDB is running. Check DB_URL in `.env`
+
+**2. Google OAuth Not Working**
+```
+Error: Callback URL mismatch
+```
+**Solution**: Update Google Cloud Console with correct callback URL
+
+**3. CORS Error**
+```
+Access to fetch blocked by CORS policy
+```
+**Solution**: Add your frontend URL to `allowedOrigins` in [app.ts](src/app.ts)
+
+**4. Socket.IO Connection Failed**
+```
+WebSocket connection failed
+```
+**Solution**: Ensure Socket.IO client matches server version. Check CORS settings.
+
+**5. Geospatial Queries Not Working**
+```
+Error: unable to find index for $geoNear query
+```
+**Solution**: Create 2dsphere index on driver location field:
+```javascript
+db.drivers.createIndex({ location: "2dsphere" })
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Standards
+- Follow TypeScript best practices
+- Write meaningful commit messages
+- Add comments for complex logic
+- Ensure all tests pass (when implemented)
+- Update documentation for new features
+
+## 📝 Future Enhancements
+
+- [ ] Redis caching for improved performance
+- [ ] Rate limiting for API protection
+- [ ] WebSocket authentication middleware
+- [ ] Driver-to-rider rating system
+- [ ] Push notifications (Firebase)
+- [ ] Payment gateway integration (Stripe/Razorpay)
+- [ ] Ride sharing/carpooling feature
+- [ ] Advanced analytics dashboard
+- [ ] Multi-language support
+- [ ] Unit and integration tests
+- [ ] API documentation with Swagger/OpenAPI
+- [ ] Ride scheduling (book for later)
+- [ ] Promo code and discount system
+- [ ] Driver heat map visualization
+- [ ] SOS/Emergency button
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 👨‍💻 Author
+
+**Your Name**
+- GitHub: [@yourusername](https://github.com/yourusername)
+- LinkedIn: [Your Profile](https://linkedin.com/in/yourprofile)
+
+## 🙏 Acknowledgments
+
+- MongoDB for powerful geospatial queries
+- Socket.IO for real-time communication
+- Passport.js for authentication strategies
+- Agenda for reliable job scheduling
+- The Node.js and TypeScript communities
 
 ---
 
-> For detailed request/response formats, see the source code.
+<div align="center">
 
----
+**⭐ Star this repo if you find it helpful!**
 
-## Getting Started
-1. Clone the repo
-2. Install dependencies: `npm install`
-3. Set up your `.env` file
-4. Start the server: `npm run dev`
+Made with ❤️ by [Your Name]
 
----
-
-## License
-MIT
+</div>
 
 
