@@ -1,4 +1,4 @@
-# � Ride Booking Backend
+#  Ride Booking Backend
 
 [🌐 Live API Deployment](https://ride-booking-system-backend-production.up.railway.app)
 ## 📋 Table of Contents
