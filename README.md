@@ -23,7 +23,7 @@
 
 A production-ready, scalable Node.js/Express TypeScript backend for a comprehensive ride-hailing platform. This system manages user authentication, driver/vehicle management, real-time ride requests, intelligent driver matching, automated job scheduling, analytics, and reporting with MongoDB geospatial queries and Socket.IO real-time communication.
 
-The backend is designed with enterprise-grade architecture featuring modular design patterns, role-based access control, automated business logic handling, and comprehensive error management for reliable production deployment.
+Backend is designed with enterprise-grade architecture featuring modular design patterns, role-based access control, automated business logic handling, and comprehensive error management for reliable production deployment.
 
 > **Distance Calculation:** Uses the Haversine formula to calculate accurate distances (in kilometers) between geographic coordinates (latitude/longitude) for precise fare calculations and driver matching logic.
 
