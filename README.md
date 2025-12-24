@@ -1,6 +1,6 @@
 # � Ride Booking Backend
 
-[🌐 Live API Deployment](https://ride-booking-backend-six.vercel.app)
+[🌐 Live API Deployment](https://ride-booking-system-backend-production.up.railway.app)
 ## 📋 Table of Contents
 - [Project Overview](#-project-overview)
 - [Key Features](#-key-features)
