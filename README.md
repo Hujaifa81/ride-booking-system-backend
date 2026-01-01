@@ -1,6 +1,25 @@
 # � Ride Booking Backend
 
-[🌐 Live API Deployment](https://your-app-name.onrender.com)
+[🌐 Live API](https://ride-booking-system-backend.onrender.com) | [🖥️ Live Frontend](https://ride-booking-frontend-eta.vercel.app/)
+
+## 🔑 Test Credentials
+
+Use these credentials to test the API with different user roles:
+
+**👤 Rider Account:**
+- Email: `h@gmail.com`
+- Password: `123456@aA`
+
+**🚗 Driver Account:**
+- Email: `abuhojaifa@gmail.com`
+- Password: `1234567@aA`
+
+**🔴 Admin Account:**
+- Email: `admin@gmail.com`
+- Password: `Admin@123`
+
+---
+
 ## 📋 Table of Contents
 - [Project Overview](#-project-overview)
 - [Key Features](#-key-features)
@@ -506,7 +525,7 @@ You can test the API using:
 
 **Base URL**: 
 - Development: `http://localhost:5000/api/v1`
-- Production: `https://your-app-name.onrender.com/api/v1`
+- Production: `https://ride-booking-system-backend.onrender.com/api/v1`
 
 ## 🏗️ Architecture & Design Patterns
 
