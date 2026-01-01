@@ -42,6 +42,15 @@ const googleCallback = (0, catchAsync_1.catchAsync)((req, res, next) => __awaite
     if (!user) {
         throw new AppError_1.default(http_status_codes_1.default.NOT_FOUND, "User not found");
     }
+    // Clear any existing cookies before setting new ones
+    const cookieOptions = {
+        httpOnly: true,
+        secure: env_1.envVars.NODE_ENV === 'production',
+        sameSite: env_1.envVars.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
+    };
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
     const tokenInfo = (0, userToken_1.createUserToken)(user);
     (0, setCookie_1.setCookie)(res, tokenInfo);
     res.redirect(`${env_1.envVars.FRONTEND_URL}/${redirectUrl}`);
@@ -70,16 +79,35 @@ const credentialsLogin = (0, catchAsync_1.catchAsync)((req, res, next) => __awai
     })(req, res, next);
 }));
 const logout = (0, catchAsync_1.catchAsync)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    res.clearCookie("accessToken", {
+    // Clear cookies with ALL possible domain/path combinations
+    const cookieOptions = {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax'
-    });
-    res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax'
-    });
+        secure: env_1.envVars.NODE_ENV === 'production',
+        sameSite: env_1.envVars.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
+    };
+    // Clear access token
+    res.clearCookie("accessToken", cookieOptions);
+    // Clear refresh token
+    res.clearCookie("refreshToken", cookieOptions);
+    // Clear session cookie if it exists
+    res.clearCookie("connect.sid", cookieOptions);
+    // Destroy express session
+    if (req.session) {
+        req.session.destroy((err) => {
+            if (err) {
+                console.error("Session destroy error:", err);
+            }
+        });
+    }
+    // Logout from passport
+    if (req.logout) {
+        req.logout((err) => {
+            if (err) {
+                console.error("Passport logout error:", err);
+            }
+        });
+    }
     (0, sendResponse_1.sendResponse)(res, {
         success: true,
         statusCode: http_status_codes_1.default.OK,

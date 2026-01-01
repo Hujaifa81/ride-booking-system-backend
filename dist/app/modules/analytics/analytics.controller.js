@@ -8,13 +8,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyticsController = void 0;
 const analytics_service_1 = require("./analytics.service");
+const sendResponse_1 = require("../../utils/sendResponse");
+const http_status_codes_1 = __importDefault(require("http-status-codes"));
 const getDashboardSummary = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { from, to, driverId, userId } = req.query;
-    const data = yield analytics_service_1.Analytics.getKpis({ from, to, driverId, userId });
-    res.json(data);
+    const filteredDate = req.query;
+    const summary = yield analytics_service_1.Analytics.getDashboardSummary(filteredDate);
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Dashboard summary fetched successfully",
+        success: true,
+        data: summary
+    });
+});
+const getAdminAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { from, to, metric } = req.query;
+    const data = yield analytics_service_1.Analytics.getAdvancedAnalytics(from, to, metric !== null && metric !== void 0 ? metric : "rides");
+    (0, sendResponse_1.sendResponse)(res, {
+        statusCode: http_status_codes_1.default.OK,
+        message: "Admin analytics fetched successfully",
+        success: true,
+        data: data
+    });
 });
 const getRideTrends = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { from, to, granularity, driverId, userId } = req.query;
@@ -53,5 +73,6 @@ exports.analyticsController = {
     getTopDriversCtrl,
     getTopRidersCtrl,
     getCancellationBreakdownCtrl,
-    getFunnelCtrl
+    getFunnelCtrl,
+    getAdminAnalytics
 };

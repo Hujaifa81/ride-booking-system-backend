@@ -21,45 +21,64 @@ const agenda_1 = require("./app/agenda/agenda");
 require("./app/agenda/jobs/ride.job");
 const socket_1 = require("./app/config/socket");
 let server;
+function connectDB() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield mongoose_1.default.connect(env_1.envVars.DB_URL);
+            console.log("✅ Connected to DB!!");
+        }
+        catch (error) {
+            console.error("❌ DB connection error:", error);
+            throw error;
+        }
+    });
+}
 const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        yield mongoose_1.default.connect(env_1.envVars.DB_URL);
-        console.log("Connected to DB!!");
+        yield connectDB();
         const httpServer = (0, http_1.createServer)(app_1.default);
         (0, socket_1.initializeSocket)(httpServer);
-        server = httpServer.listen(env_1.envVars.PORT, () => {
-            console.log(`Server is listening to port ${env_1.envVars.PORT}`);
+        const port = env_1.envVars.PORT || 5000;
+        server = httpServer.listen(port, () => {
+            console.log(`🚀 Server is listening on port ${port}`);
         });
+        // Start agenda for background jobs
+        yield agenda_1.agenda.start();
+        console.log('✅ Agenda started');
+        // Seed admin (only in development or first run)
+        if (process.env.NODE_ENV !== 'production') {
+            yield (0, seedAdmin_1.seedAdmin)();
+        }
     }
     catch (error) {
-        console.log(error);
+        console.error("❌ Server startup error:", error);
+        throw error;
     }
 });
-(() => __awaiter(void 0, void 0, void 0, function* () {
-    yield startServer();
-    yield (0, seedAdmin_1.seedAdmin)();
-    yield agenda_1.agenda.start();
-}))();
-process.on("SIGTERM", () => {
-    console.log("SIGTERM signal received... Server shutting down..");
+startServer();
+// Graceful shutdown handlers
+process.on("SIGTERM", () => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("⏳ SIGTERM signal received... Server shutting down..");
+    yield agenda_1.agenda.stop();
     if (server) {
         server.close(() => {
-            process.exit(1);
+            mongoose_1.default.connection.close();
+            process.exit(0);
         });
     }
-    process.exit(1);
-});
-process.on("SIGINT", () => {
-    console.log("SIGINT signal received... Server shutting down..");
+}));
+process.on("SIGINT", () => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("⏳ SIGINT signal received... Server shutting down..");
+    yield agenda_1.agenda.stop();
     if (server) {
         server.close(() => {
-            process.exit(1);
+            mongoose_1.default.connection.close();
+            process.exit(0);
         });
     }
-    process.exit(1);
-});
+}));
 process.on("unhandledRejection", (err) => {
-    console.log("Unhandled Rejection detected... Server shutting down..", err);
+    console.error("❌ Unhandled Rejection detected... Server shutting down..", err);
     if (server) {
         server.close(() => {
             process.exit(1);
@@ -68,7 +87,7 @@ process.on("unhandledRejection", (err) => {
     process.exit(1);
 });
 process.on("uncaughtException", (err) => {
-    console.log("Uncaught Exception detected... Server shutting down..", err);
+    console.error("❌ Uncaught Exception detected... Server shutting down..", err);
     if (server) {
         server.close(() => {
             process.exit(1);
@@ -76,3 +95,4 @@ process.on("uncaughtException", (err) => {
     }
     process.exit(1);
 });
+exports.default = app_1.default;

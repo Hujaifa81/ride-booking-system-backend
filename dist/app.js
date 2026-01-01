@@ -15,6 +15,8 @@ const express_session_1 = __importDefault(require("express-session"));
 const env_1 = require("./app/config/env");
 require("./app/config/passport");
 const app = (0, express_1.default)();
+// Trust Railway/Vercel proxy - MOVED BEFORE COOKIE PARSER
+app.set('trust proxy', 1);
 // Cookie parser should come before session
 app.use((0, cookie_parser_1.default)());
 app.use((0, express_session_1.default)({
@@ -22,21 +24,23 @@ app.use((0, express_session_1.default)({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // true in production
+        secure: env_1.envVars.NODE_ENV === 'production' ? true : false,
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        // maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+        sameSite: env_1.envVars.NODE_ENV === 'production' ? 'none' : 'lax', // CHANGED: use envVars
+        maxAge: 7 * 24 * 60 * 60 * 1000, // UNCOMMENTED: 24 hours
+        domain: env_1.envVars.NODE_ENV === 'production' ? undefined : 'localhost' // ADDED: domain setting
+    },
+    proxy: env_1.envVars.NODE_ENV === 'production' // ADDED: trust proxy in production
 }));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
-app.set('trust proxy', 1);
-// Enhanced CORS configuration for Vercel
+// Enhanced CORS configuration
 const allowedOrigins = [
     env_1.envVars.FRONTEND_URL,
     'http://localhost:3000',
     'http://localhost:5173',
-    'http://localhost:5174'
+    'http://localhost:5174',
+    'https://ride-booking-frontend-eta.vercel.app' // ADDED: explicit frontend URL
 ].filter(Boolean); // Remove undefined/null values
 app.use((0, cors_1.default)({
     origin: function (origin, callback) {
@@ -47,14 +51,16 @@ app.use((0, cors_1.default)({
             callback(null, true);
         }
         else {
+            console.log('❌ Blocked by CORS:', origin); // ADDED: log blocked origins
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'], // ADDED: X-Requested-With
     exposedHeaders: ['Set-Cookie'],
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
+    preflightContinue: false // ADDED: handle preflight properly
 }));
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());

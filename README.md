@@ -1,6 +1,6 @@
 # � Ride Booking Backend
 
-[🌐 Live API Deployment](https://ride-booking-system-backend-production.up.railway.app)
+[🌐 Live API Deployment](https://your-app-name.onrender.com)
 ## 📋 Table of Contents
 - [Project Overview](#-project-overview)
 - [Key Features](#-key-features)
@@ -268,8 +268,8 @@ The system implements comprehensive role-based access control (RBAC):
 - **Environment**: dotenv for configuration
 
 ### Deployment
-- **Platform**: Vercel (serverless)
-- **Proxy Handling**: Configured for Railway/Vercel
+- **Platform**: Render (primary), Vercel (serverless alternative)
+- **Proxy Handling**: Configured for Render/Railway/Vercel
 - **Production Ready**: Environment-based configuration
 
 ## 🔌 API Endpoints
@@ -506,7 +506,7 @@ You can test the API using:
 
 **Base URL**: 
 - Development: `http://localhost:5000/api/v1`
-- Production: `https://ride-booking-backend-six.vercel.app/api/v1`
+- Production: `https://your-app-name.onrender.com/api/v1`
 
 ## 🏗️ Architecture & Design Patterns
 
@@ -553,18 +553,69 @@ module/
 
 ## 🚀 Deployment
 
-### Vercel Deployment (Current)
+### Render Deployment (Recommended)
 
-The application is deployed on Vercel with the following configuration:
+The application is currently deployed on Render with GitHub integration.
 
-1. **Build Settings**:
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-   - Install Command: `npm install`
+#### Quick Setup:
 
-2. **Environment Variables**: Configure all `.env` variables in Vercel dashboard
+1. **Create Account & Connect GitHub**
+   - Sign up at [render.com](https://render.com)
+   - Connect your GitHub account
 
-3. **Serverless Functions**: Express app runs as serverless function
+2. **Create New Web Service**
+   - Click "New +" → "Web Service"
+   - Select your repository
+   - Choose branch (usually `main`)
+
+3. **Configuration**:
+   ```yaml
+   Name: ride-booking-backend
+   Region: Choose nearest to your users
+   Branch: main
+   Runtime: Node
+   Build Command: npm install && npm run build
+   Start Command: npm start
+   ```
+
+4. **Environment Variables**:
+   Add all required environment variables in Render dashboard:
+   ```env
+   NODE_ENV=production
+   PORT=10000
+   DB_URL=your-mongodb-connection-string
+   JWT_ACCESS_SECRET=your-access-secret
+   JWT_REFRESH_SECRET=your-refresh-secret
+   JWT_ACCESS_EXPIRES_IN=1d
+   JWT_REFRESH_EXPIRES_IN=7d
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   GOOGLE_CALLBACK_URL=https://your-app.onrender.com/api/v1/auth/google/callback
+   EXPRESS_SESSION_SECRET=your-session-secret
+   FRONTEND_URL=your-frontend-url
+   SALT_ROUND=10
+   ```
+
+5. **Deploy**:
+   - Click "Create Web Service"
+   - Render will auto-deploy on every push to your branch
+   - Your app will be live at: `https://your-app-name.onrender.com`
+
+#### Post-Deployment:
+- ✅ Update Google OAuth callback URL in Google Cloud Console
+- ✅ Whitelist Render IPs in MongoDB Atlas (or allow all: 0.0.0.0/0)
+- ✅ Update FRONTEND_URL to match your frontend deployment
+- ✅ Test all endpoints and Socket.IO connections
+
+#### Render Features:
+- ✅ Automatic deployments from GitHub
+- ✅ Free SSL certificates
+- ✅ Zero-downtime deploys
+- ✅ Auto-scaling capabilities
+- ✅ Built-in health checks
+- ✅ Log streaming and monitoring
+
+> **Note**: Render free tier may spin down with inactivity. Upgrade to paid plan for always-on service.
 
 ### Alternative Deployment Options
 
@@ -587,6 +638,21 @@ railway variables
 # Deploy
 railway up
 ```
+</details>
+
+<details>
+<summary><b>Vercel Deployment</b></summary>
+
+1. **Build Settings**:
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+   - Install Command: `npm install`
+
+2. **Environment Variables**: Configure all `.env` variables in Vercel dashboard
+
+3. **Serverless Functions**: Express app runs as serverless function
+
+> **Note**: Vercel is optimized for serverless. For long-running processes (Socket.IO, Agenda jobs), Render is recommended.
 </details>
 
 <details>
